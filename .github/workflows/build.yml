@@ -30,7 +30,7 @@ jobs:
     - name: Compile sketch
       run: |
         mkdir -p build
-        arduino-cli compile --fqbn esp32:esp32:esp32 NFC_reader_esp32.ino --output-dir build
+        arduino-cli compile --fqbn esp32:esp32:esp32 ./NFC_reader_esp32.ino --output-dir build
 
     - name: Copy firmware to folder
       run: |
