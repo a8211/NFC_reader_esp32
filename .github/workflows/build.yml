@@ -27,6 +27,11 @@ jobs:
         arduino-cli core update-index
         arduino-cli core install esp32:esp32
 
+    - name: Install libraries
+      run: |
+        arduino-cli lib update-index
+        arduino-cli lib install "RTClib"
+
     - name: Compile sketch
       run: |
         mkdir -p build
