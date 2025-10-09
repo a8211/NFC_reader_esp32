@@ -32,7 +32,6 @@ jobs:
         arduino-cli lib update-index
         arduino-cli lib install "RTClib"
         arduino-cli lib install "SSD1306Wire"
-        arduino-cli lib install "SPI"
         arduino-cli lib install "SD"
 
     - name: Compile sketch
