@@ -31,7 +31,7 @@ jobs:
       run: |
         arduino-cli lib update-index
         arduino-cli lib install "RTClib"
-        arduino-cli lib install "SSD1306Wire"
+        arduino-cli lib install "ESP8266 and ESP32 OLED driver for SSD1306 displays"
         arduino-cli lib install "SD"
 
     - name: Compile sketch
