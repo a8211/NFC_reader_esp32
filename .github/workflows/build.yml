@@ -33,6 +33,7 @@ jobs:
         arduino-cli lib install "RTClib"
         arduino-cli lib install "ESP8266 and ESP32 OLED driver for SSD1306 displays"
         arduino-cli lib install "SD"
+        arduino-cli lib install "ArduinoJson"
 
     - name: Compile sketch
       run: |
