@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <SPI.h>
@@ -47,10 +48,18 @@ void setup() {
 
   String url = String("https://api.github.com/repos/") + owner + "/" + repo + "/contents?ref=" + branch;
   Serial.println("📁 Pobieranie listy plików...");
+
   downloadFolder(url, "/");
 }
 
+
+
 void loop() {}
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 void downloadFolder(String apiUrl, String localPath) {
   HTTPClient http;
@@ -87,7 +96,7 @@ if (strcmp(type, "file") == 0) {
     if (download_url && strlen(download_url) > 0) {
         String localFilePath = localPath + name;
         Serial.printf("⬇️ Pobieranie pliku: %s\n", path);
-        downloadFile(download_url, localFilePath);
+        downloadFile(download_url, localFilePath.c_str());
     } else {
         Serial.printf("⚠️ Pomijam plik (brak download_url): %s\n", path);
     }
@@ -114,69 +123,68 @@ else if (strcmp(type, "dir") == 0 && url) {
   }
 }
 
-void downloadFile(const char* fileURL, String localPath) {
-  Serial.printf("\n🔗 Rozpoczynam pobieranie: %s\n", fileURL);
-
+bool downloadFile(const char* url, const char* path) {
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
-  http.begin(fileURL);
-  http.addHeader("User-Agent", "ESP32");
-  http.setTimeout(30000); // 30 s timeout na połączenie/odczyt
+  http.setTimeout(20000);
 
-  int httpCode = http.GET();
-  Serial.printf("📄 HTTP GET code: %d\n", httpCode);
-  if (httpCode != HTTP_CODE_OK) {
-    Serial.printf("⚠️ Błąd HTTP %d przy pobieraniu %s\n", httpCode, fileURL);
-    http.end();
-    return;
+  Serial.printf("🔗 Rozpoczynam pobieranie: %s\n", url);
+  if (!http.begin(client, url)) {
+    Serial.println("❌ Nie udało się rozpocząć połączenia HTTP!");
+    return false;
   }
 
-  int totalLength = http.getSize();
-  Serial.printf("📦 Rozmiar pliku: %d bajtów\n", totalLength);
-
-  File file = SD.open(localPath, FILE_WRITE);
-  if (!file) {
-    Serial.printf("❌ Nie można otworzyć pliku %s do zapisu\n", localPath.c_str());
+  int httpCode = http.GET();
+  if (httpCode != HTTP_CODE_OK) {
+    Serial.printf("❌ Błąd HTTP GET: %d\n", httpCode);
     http.end();
-    return;
+    return false;
+  }
+
+  int totalSize = http.getSize();
+  Serial.printf("📦 Rozmiar pliku: %d bajtów\n", totalSize);
+
+  File file = SD.open(path, FILE_WRITE);
+  if (!file) {
+    Serial.println("❌ Nie mogę otworzyć pliku do zapisu!");
+    http.end();
+    return false;
   }
 
   WiFiClient* stream = http.getStreamPtr();
-  uint8_t buffer[2048]; // bufor 4 KB
+  uint8_t buffer[256];
   int downloaded = 0;
-  int lastPercent = -1;
-  unsigned long lastDataTime = millis();
+  unsigned long lastUpdate = millis();
+  unsigned long startTime = millis();
 
-  while (downloaded < totalLength) {
-    size_t size = stream->available();
-    if (size) {
-      int c = stream->readBytes(buffer, (size > sizeof(buffer) ? sizeof(buffer) : size));
-      file.write(buffer, c);
-      file.flush(); // od razu zapisujemy na SD
-      downloaded += c;
-      lastDataTime = millis();
+  while (http.connected() && (downloaded < totalSize || totalSize == -1)) {
+    size_t available = stream->available();
+    if (available) {
+      int len = stream->readBytes(buffer, std::min((size_t)sizeof(buffer), available));
+      file.write(buffer, len);
+      downloaded += len;
 
-      int percent = (downloaded * 100) / totalLength;
-      if (percent != lastPercent) {
-        Serial.printf("⬇️ %s: %d%% (%d bajtów)\n", localPath.c_str(), percent, downloaded);
-        lastPercent = percent;
+      // Procent postępu co 500ms
+      if (millis() - lastUpdate > 500) {
+        int percent = totalSize > 0 ? (downloaded * 100 / totalSize) : 0;
+        Serial.printf("⬇️ %s: %d%% (%d/%d)\n", path, percent, downloaded, totalSize);
+        lastUpdate = millis();
+        Serial.printf("Dostępny RAM: %d\n", ESP.getFreeHeap());
       }
     } else {
-      // brak danych chwilowo, czekamy max 1h
-      if ((millis() - lastDataTime) > 3600000) {
-        Serial.println("❌ Timeout: brak danych > 1h");
-        break;
-      }
       delay(1);
     }
   }
 
-  if (downloaded >= totalLength) {
-    Serial.println("✅ Pobieranie zakończone.");
-  } else {
-    Serial.println("⚠️ Pobieranie przerwane przed ukończeniem pliku.");
-  }
+  unsigned long duration = millis() - startTime;
+  float speedKBs = (downloaded / 1024.0) / (duration / 1000.0);
+  Serial.printf("✅ Pobieranie zakończone: %s (%d bajtów, %.2f KB/s)\n", path, downloaded, speedKBs);
 
   file.close();
   http.end();
-  Serial.printf("💾 Zapisano %s (%d bajtów)\n", localPath.c_str(), downloaded);
+  return true;
 }
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
