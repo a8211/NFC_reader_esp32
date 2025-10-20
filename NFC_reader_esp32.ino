@@ -160,7 +160,6 @@ bool downloadFile(const char* url, const char* path) {
   unsigned long lastUpdate = millis();
   unsigned long startTime = millis();
   http.setTimeout(240000);
-
   while (http.connected() && (downloaded < totalSize || totalSize == -1)) {
     size_t available = stream->available();
     if (available) {
@@ -182,11 +181,9 @@ bool downloadFile(const char* url, const char* path) {
       delay(1);
     }
   }
-
   unsigned long duration = millis() - startTime;
   float speedKBs = (downloaded / 1024.0) / (duration / 1000.0);
   Serial.printf("✅ Pobieranie zakończone: %s (%d bajtów, %.2f KB/s)\n", path, downloaded, speedKBs);
-
   file.close();
   http.end();
   return true;
@@ -196,11 +193,9 @@ bool downloadFile(const char* url, const char* path) {
 String getDownloadUrl(const char* repoPath) {
   String apiUrl = "https://api.github.com/repos/a8211/NFC_reader_esp32/contents/";
   apiUrl += repoPath;
-
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
-
   http.begin(client, apiUrl);
   http.addHeader("User-Agent", "ESP32");
   if (strlen(githubToken) > 0) {
@@ -213,10 +208,8 @@ String getDownloadUrl(const char* repoPath) {
     http.end();
     return "";
   }
-
   String payload = http.getString();
   http.end();
-
   StaticJsonDocument<2048> doc;
   DeserializationError error = deserializeJson(doc, payload);
   if (error) {
@@ -250,11 +243,11 @@ void downloadAllFiles() {
   }
   Serial.println("\n📥 Wszystkie pliki pobrane!");
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 String calculateFileSHA(File file) {
   if (!file) return "";
-
   uint8_t shaResult[32];
   mbedtls_sha256_context ctx;
   mbedtls_sha256_init(&ctx);
@@ -283,7 +276,6 @@ bool checkForNewFirmware() {
   File fw = SD.open(FIRMWARE_PATH, FILE_READ);
 String newSHA = calculateFileSHA(fw);
 fw.close();
-
   String oldSHA = "";
   if (SD.exists(SHA_PATH)) {
     File f = SD.open(SHA_PATH);
@@ -320,7 +312,6 @@ bool performUpdate() {
     fw.close();
     return false;
   }
-
   size_t written = Update.writeStream(fw);
   fw.close();
 
@@ -367,7 +358,6 @@ bool rollbackFirmware() {
   }
 }
 
-
 void debugFirmwareFile() {
   Serial.println("\n🔍 Sprawdzanie pliku firmware...");
 
@@ -399,7 +389,6 @@ void debugFirmwareFile() {
     Serial.print(" ");
   }
   Serial.println();
-
   fw.close();
 
   // Sprawdzenie Update.begin()
@@ -412,7 +401,6 @@ void debugFirmwareFile() {
     Update.end(); // zamykamy od razu, bo to tylko test
   }
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -448,8 +436,6 @@ void setup() {
 
  // ==========
 
-
-
   if (checkForNewFirmware()) {
     Serial.println("🆕 Nowe oprogramowanie wykryte! Aktualizacja...");
     if (performUpdate()) {
@@ -467,7 +453,6 @@ void setup() {
   } else {
     Serial.println("ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...");
   }
-
 }
 
 void loop() {}
