@@ -42,7 +42,7 @@ const int fileCount = sizeof(filesToUpload) / sizeof(filesToUpload[0]);
 // Repozytorium i pliki do pobrania:
 // [repo path w GitHubie, nazwa pliku docelowego na SD]
 const char* filesToDownload[][2] = {
-  {"firmware/NFC_reader_esp32.ino.merged.bin", "/firmware/NFC_reader_esp32.bin"}
+  {"firmware/NFC_reader_esp32.ino.bin", "/firmware/NFC_reader_esp32.bin"}
 };
 const int fileCountDownload = sizeof(filesToDownload) / sizeof(filesToDownload[0]);
 
@@ -439,7 +439,15 @@ void setup() {
 
  // ==========
 
-  debugFirmwareFile();
+  client.setInsecure();
+  downloadAllFiles();
+  
+  for (int i = 0; i < fileCount; i++) {
+    uploadFileToGitHub(filesToUpload[i][0], filesToUpload[i][1]);
+  }
+
+ // ==========
+
 
 
   if (checkForNewFirmware()) {
@@ -460,14 +468,6 @@ void setup() {
     Serial.println("ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...");
   }
 
- // ==========
-  
-  client.setInsecure();
-  downloadAllFiles();
-  
-  for (int i = 0; i < fileCount; i++) {
-    uploadFileToGitHub(filesToUpload[i][0], filesToUpload[i][1]);
-  }
 }
 
 void loop() {}
