@@ -46,8 +46,7 @@ jobs:
     - name: Copy firmware to folder
       run: |
         mkdir -p firmware
-        dir
-        cp build/NFC_reader_esp32.bin firmware/
+        cp build/NFC_reader_esp32.ino.bin firmware/
 
     - name: Commit firmware to repo
       run: |
