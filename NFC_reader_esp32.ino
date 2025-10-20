@@ -14,8 +14,7 @@
 #define SCK_PIN 18
 
 #define FIRMWARE_PATH "/firmware/NFC_reader_esp32.bin"
-#define SHA_PATH "/firmware/firmware.sha"
-#define LAST_SHA_PATH "/firmware/last_sha.txt"
+#define SHA_PATH "/last_sha.txt"
 
 // Dane sieci Wi-Fi
 const char* ssid = "Orange_Swiatlowod_8F90";
@@ -282,12 +281,12 @@ String calculateFileSHA(File file) {
 bool checkForNewFirmware() {
   if (!SD.exists(FIRMWARE_PATH)) return false;
   File fw = SD.open(FIRMWARE_PATH, FILE_READ);
-  String newSHA = calculateFileSHA(fw);
-  fw.close();
+String newSHA = calculateFileSHA(fw);
+fw.close();
 
   String oldSHA = "";
-  if (SD.exists(LAST_SHA_PATH)) {
-    File f = SD.open(LAST_SHA_PATH);
+  if (SD.exists(SHA_PATH)) {
+    File f = SD.open(SHA_PATH);
     oldSHA = f.readString();
     f.close();
     oldSHA.trim();
@@ -310,8 +309,14 @@ bool performUpdate() {
   }
 
   size_t fwSize = fw.size();
+  if (fwSize == 0) {
+    Serial.println("⚠️ Plik firmware jest pusty!");
+    fw.close();
+    return false;
+  }
+
   if (!Update.begin(fwSize)) {
-    Serial.println("❌ Nie można rozpocząć aktualizacji!");
+    Serial.printf("❌ Nie można rozpocząć aktualizacji! (%s)\n", Update.errorString());
     fw.close();
     return false;
   }
@@ -321,6 +326,7 @@ bool performUpdate() {
 
   if (written == fwSize && Update.end(true)) {
     Serial.println("✅ Firmware zaktualizowany pomyślnie!");
+    // zapisanie SHA
     File fw2 = SD.open(FIRMWARE_PATH);
     String sha = calculateFileSHA(fw2);
     fw2.close();
@@ -334,7 +340,7 @@ bool performUpdate() {
 
 // Zapisz aktualny SHA
 void saveCurrentSHA(String sha) {
-  File f = SD.open(LAST_SHA_PATH, FILE_WRITE);
+  File f = SD.open(SHA_PATH, FILE_WRITE);
   if (f) {
     f.print(sha);
     f.close();
@@ -361,6 +367,53 @@ bool rollbackFirmware() {
   }
 }
 
+
+void debugFirmwareFile() {
+  Serial.println("\n🔍 Sprawdzanie pliku firmware...");
+
+  // Sprawdź czy plik istnieje
+  if (!SD.exists(FIRMWARE_PATH)) {
+    Serial.printf("❌ Plik nie istnieje: %s\n", FIRMWARE_PATH);
+    return;
+  }
+
+  // Otwórz plik
+  File fw = SD.open(FIRMWARE_PATH, FILE_READ);
+  if (!fw) {
+    Serial.printf("❌ Nie można otworzyć pliku: %s\n", FIRMWARE_PATH);
+    return;
+  }
+
+  // Rozmiar pliku
+  size_t fwSize = fw.size();
+  Serial.printf("📄 Plik otworzony: %s\n", FIRMWARE_PATH);
+  Serial.printf("📏 Rozmiar pliku: %d bajtów\n", fwSize);
+
+  // Spróbuj przeczytać pierwsze 64 bajty i wyświetlić w HEX
+  Serial.print("🔢 Pierwsze 64 bajty pliku (HEX): ");
+  uint8_t buffer[64];
+  size_t readLen = fw.read(buffer, sizeof(buffer));
+  for (size_t i = 0; i < readLen; i++) {
+    if (buffer[i] < 16) Serial.print("0");
+    Serial.print(buffer[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.println();
+
+  fw.close();
+
+  // Sprawdzenie Update.begin()
+  if (fwSize == 0) {
+    Serial.println("⚠️ Rozmiar pliku = 0, Update.begin() nie zostanie wywołane!");
+  } else if (!Update.begin(fwSize)) {
+    Serial.printf("❌ Update.begin() nie powiodło się: %s\n", Update.errorString());
+  } else {
+    Serial.println("✅ Update.begin() działa poprawnie z tym plikiem.");
+    Update.end(); // zamykamy od razu, bo to tylko test
+  }
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
@@ -385,6 +438,9 @@ void setup() {
   Serial.println("💾 Karta SD gotowa!");
 
  // ==========
+
+  debugFirmwareFile();
+
 
   if (checkForNewFirmware()) {
     Serial.println("🆕 Nowe oprogramowanie wykryte! Aktualizacja...");
