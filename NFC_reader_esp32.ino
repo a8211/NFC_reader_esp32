@@ -5,11 +5,17 @@
 #include <SPI.h>
 #include <SD.h>
 #include <base64.h>
+#include <Update.h>
+#include <esp_ota_ops.h>
 
 #define SD_CS 5
 #define MISO_PIN 19
 #define MOSI_PIN 23
 #define SCK_PIN 18
+
+#define FIRMWARE_PATH "/firmware/NFC_reader_esp32.bin"
+#define SHA_PATH "/firmware/firmware.sha"
+#define LAST_SHA_PATH "/firmware/last_sha.txt"
 
 // Dane sieci Wi-Fi
 const char* ssid = "Orange_Swiatlowod_8F90";
@@ -247,6 +253,116 @@ void downloadAllFiles() {
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+String calculateFileSHA(File file) {
+  if (!file) return "";
+
+  uint8_t shaResult[32];
+  mbedtls_sha256_context ctx;
+  mbedtls_sha256_init(&ctx);
+  mbedtls_sha256_starts(&ctx, 0);
+
+  uint8_t buffer[512];
+  while (file.available()) {
+    size_t len = file.read(buffer, sizeof(buffer));
+    mbedtls_sha256_update(&ctx, buffer, len);
+  }
+
+  mbedtls_sha256_finish(&ctx, shaResult);
+  mbedtls_sha256_free(&ctx);
+
+  String hex = "";
+  for (int i = 0; i < 32; i++) {
+    if (shaResult[i] < 16) hex += "0";
+    hex += String(shaResult[i], HEX);
+  }
+  return hex;
+}
+
+// Sprawdź czy nowy firmware różni się SHA
+bool checkForNewFirmware() {
+  if (!SD.exists(FIRMWARE_PATH)) return false;
+  File fw = SD.open(FIRMWARE_PATH, FILE_READ);
+  String newSHA = calculateFileSHA(fw);
+  fw.close();
+
+  String oldSHA = "";
+  if (SD.exists(LAST_SHA_PATH)) {
+    File f = SD.open(LAST_SHA_PATH);
+    oldSHA = f.readString();
+    f.close();
+    oldSHA.trim();
+  }
+
+  if (newSHA != oldSHA && newSHA.length() > 0) {
+    Serial.println("💾 SHA nowego pliku: " + newSHA);
+    Serial.println("📄 SHA poprzedniego: " + oldSHA);
+    return true;
+  }
+  return false;
+}
+
+// Aktualizacja firmware z SD
+bool performUpdate() {
+  File fw = SD.open(FIRMWARE_PATH);
+  if (!fw) {
+    Serial.println("❌ Nie udało się otworzyć pliku firmware!");
+    return false;
+  }
+
+  size_t fwSize = fw.size();
+  if (!Update.begin(fwSize)) {
+    Serial.println("❌ Nie można rozpocząć aktualizacji!");
+    fw.close();
+    return false;
+  }
+
+  size_t written = Update.writeStream(fw);
+  fw.close();
+
+  if (written == fwSize && Update.end(true)) {
+    Serial.println("✅ Firmware zaktualizowany pomyślnie!");
+    File fw2 = SD.open(FIRMWARE_PATH);
+    String sha = calculateFileSHA(fw2);
+    fw2.close();
+    saveCurrentSHA(sha);
+    return true;
+  } else {
+    Serial.printf("❌ Błąd aktualizacji: %s\n", Update.errorString());
+    return false;
+  }
+}
+
+// Zapisz aktualny SHA
+void saveCurrentSHA(String sha) {
+  File f = SD.open(LAST_SHA_PATH, FILE_WRITE);
+  if (f) {
+    f.print(sha);
+    f.close();
+  }
+}
+
+// Rollback do poprzedniej wersji
+bool rollbackFirmware() {
+  const esp_partition_t *running = esp_ota_get_running_partition();
+  const esp_partition_t *last = esp_ota_get_last_invalid_partition();
+
+  if (!last) {
+    Serial.println("⚠️ Brak poprzedniej wersji do rollbacku!");
+    return false;
+  }
+
+  esp_err_t err = esp_ota_set_boot_partition(last);
+  if (err == ESP_OK) {
+    Serial.println("🔁 Rollback ustawiony pomyślnie!");
+    return true;
+  } else {
+    Serial.printf("❌ Błąd rollbacku: %s\n", esp_err_to_name(err));
+    return false;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -268,10 +384,30 @@ void setup() {
   }
   Serial.println("💾 Karta SD gotowa!");
 
-  client.setInsecure();
+  ==========
 
-  downloadAllFiles();
+  if (checkForNewFirmware()) {
+    Serial.println("🆕 Nowe oprogramowanie wykryte! Aktualizacja...");
+    if (performUpdate()) {
+      Serial.println("✅ Aktualizacja zakończona sukcesem!");
+      ESP.restart();
+    } else {
+      Serial.println("⚠️ Aktualizacja nie powiodła się. Próba rollbacku...");
+      if (rollbackFirmware()) {
+        Serial.println("🔁 Rollback zakończony sukcesem. Restart...");
+        ESP.restart();
+      } else {
+        Serial.println("❌ Rollback nieudany! Urządzenie w stanie awaryjnym.");
+      }
+    }
+  } else {
+    Serial.println("ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...");
+  }
+
+  ==========
   
+  client.setInsecure();
+  downloadAllFiles();
   
   for (int i = 0; i < fileCount; i++) {
     uploadFileToGitHub(filesToUpload[i][0], filesToUpload[i][1]);
