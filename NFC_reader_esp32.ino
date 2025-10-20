@@ -384,7 +384,7 @@ void setup() {
   }
   Serial.println("💾 Karta SD gotowa!");
 
-  ==========
+ // ==========
 
   if (checkForNewFirmware()) {
     Serial.println("🆕 Nowe oprogramowanie wykryte! Aktualizacja...");
@@ -404,7 +404,7 @@ void setup() {
     Serial.println("ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...");
   }
 
-  ==========
+ // ==========
   
   client.setInsecure();
   downloadAllFiles();
