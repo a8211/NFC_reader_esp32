@@ -450,9 +450,6 @@ void setup() {
     display.clear();
     display.drawString(0, 0, "Polaczono z WIFI");
     display.display();
-    delay(1000);
-    display.clear();
-    display.display();
 
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SD_CS);
   if (!SD.begin(SD_CS)) {
@@ -467,6 +464,14 @@ void setup() {
  // ==========
 
   client.setInsecure();
+
+    display.clear();
+    display.drawString(0, 0, "Pobieranie plikow");
+    display.display();
+    delay(1000);
+    display.clear();
+    display.display();
+  
   downloadAllFiles();
   
   for (int i = 0; i < fileCount; i++) {
