@@ -13,6 +13,8 @@
 #define MOSI_PIN 23
 #define SCK_PIN 18
 
+
+
 #define FIRMWARE_PATH "/firmware/NFC_reader_esp32.bin"
 #define SHA_PATH "/last_sha.txt"
 
@@ -45,6 +47,12 @@ const char* filesToDownload[][2] = {
   {"firmware/NFC_reader_esp32.ino.bin", "/firmware/NFC_reader_esp32.bin"}
 };
 const int fileCountDownload = sizeof(filesToDownload) / sizeof(filesToDownload[0]);
+
+#define I2C_SDA_PIN 21
+#define I2C_SCL_PIN 22
+
+#define SCREEN_ADDRESS 0x3C
+SSD1306Wire display(SCREEN_ADDRESS, I2C_SDA_PIN, I2C_SCL_PIN);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -404,11 +412,24 @@ void debugFirmwareFile() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void DisplayStart(){
+  display.init();
+  display.clear();
+  display.flipScreenVertically();
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0, 0, "Initializing...");
+  display.display();
+  delay(1000);
+  display.clear();
+  display.display();
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
   Serial.println("\n🔌 Start ESP32...");
+  DisplayStart()
   WiFi.begin(ssid, password);
   Serial.print("🔗 Łączenie z WiFi");
   while (WiFi.status() != WL_CONNECTED) {
