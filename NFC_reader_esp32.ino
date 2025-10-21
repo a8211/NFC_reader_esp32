@@ -468,9 +468,6 @@ void setup() {
     display.clear();
     display.drawString(0, 0, "Pobieranie plikow");
     display.display();
-    delay(1000);
-    display.clear();
-    display.display();
   
   downloadAllFiles();
   
