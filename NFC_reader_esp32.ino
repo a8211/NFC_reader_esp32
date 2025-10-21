@@ -7,6 +7,7 @@
 #include <base64.h>
 #include <Update.h>
 #include <esp_ota_ops.h>
+#include <SSD1306Wire.h>
 
 #define SD_CS 5
 #define MISO_PIN 19
@@ -424,12 +425,14 @@ void DisplayStart(){
   display.display();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
 
   Serial.println("\n🔌 Start ESP32...");
-  DisplayStart()
+  DisplayStart();
   WiFi.begin(ssid, password);
   Serial.print("🔗 Łączenie z WiFi");
   while (WiFi.status() != WL_CONNECTED) {
