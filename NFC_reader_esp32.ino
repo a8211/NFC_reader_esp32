@@ -326,6 +326,11 @@ bool performUpdate() {
 
   if (written == fwSize && Update.end(true)) {
     Serial.println("✅ Firmware zaktualizowany pomyślnie!");
+    
+    display.clear();
+    display.drawString(0, 0, "Zaaktualizowano");
+    display.display();
+
     // zapisanie SHA
     File fw2 = SD.open(FIRMWARE_PATH);
     String sha = calculateFileSHA(fw2);
@@ -442,9 +447,17 @@ void setup() {
   Serial.println("\n✅ Połączono!");
   Serial.println(WiFi.localIP());
 
+    display.clear();
+    display.drawString(0, 0, "Błąd połączenia");
+    display.display();
+
+
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SD_CS);
   if (!SD.begin(SD_CS)) {
     Serial.println("❌ Błąd SD!");
+    display.clear();
+    display.drawString(0, 0, "Karta SD nie wykryta");
+    display.display();
     return;
   }
   Serial.println("💾 Karta SD gotowa!");
@@ -462,6 +475,11 @@ void setup() {
 
   if (checkForNewFirmware()) {
     Serial.println("🆕 Nowe oprogramowanie wykryte! Aktualizacja...");
+
+display.clear();
+display.drawString(0, 0, "Aktualizowanie...");
+display.display();
+
     if (performUpdate()) {
       Serial.println("✅ Aktualizacja zakończona sukcesem!");
       ESP.restart();
