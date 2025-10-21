@@ -423,7 +423,7 @@ void DisplayStart(){
   display.clear();
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 0, "Initializing...");
+  display.drawString(0, 0, "Inicjalizowanie...");
   display.display();
   delay(1000);
   display.clear();
@@ -448,9 +448,11 @@ void setup() {
   Serial.println(WiFi.localIP());
 
     display.clear();
-    display.drawString(0, 0, "Błąd połączenia");
+    display.drawString(0, 0, "Polaczono z WIFI");
     display.display();
-
+    delay(1000);
+    display.clear();
+    display.display();
 
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SD_CS);
   if (!SD.begin(SD_CS)) {
