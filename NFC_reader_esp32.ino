@@ -502,6 +502,7 @@ display.display();
   } else {
     Serial.println("ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...");
   }
+  WiFi.disconnect();
 }
 
 void loop() {}
