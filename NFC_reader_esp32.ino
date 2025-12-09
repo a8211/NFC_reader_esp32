@@ -1,3 +1,15 @@
+/*  update z wifi d
+ *  karta sd d
+ *  display d
+ *  ntp
+ *  zegar
+ *  zczytywanie kart
+ *  logs
+ * 
+*/
+
+
+
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -29,7 +41,7 @@ const char* repo = "NFC_reader_esp32";
 const char* branch = "main";
 
 // Twój token GitHub (PRYWATNY!)
-const char* githubToken = "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";
+const char* githubToken = "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";
 
 WiFiClientSecure client;
 
