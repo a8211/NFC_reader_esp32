@@ -23,7 +23,7 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
-//#include "mbedtls/sha256.h"
+////
 
 #define SD_CS 5
 #define MISO_PIN 19
