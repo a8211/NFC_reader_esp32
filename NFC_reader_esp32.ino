@@ -20,6 +20,10 @@
 #include <Update.h>
 #include <esp_ota_ops.h>
 #include <SSD1306Wire.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+
+//#include "mbedtls/sha256.h"
 
 #define SD_CS 5
 #define MISO_PIN 19
@@ -39,6 +43,11 @@ const char* password = "3h9N3QLXKHomQ7n5su";
 const char* owner = "a8211";
 const char* repo = "NFC_reader_esp32";
 const char* branch = "main";
+
+
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
+
 
 // Twój token GitHub (PRYWATNY!)
 const char* githubToken = "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";
@@ -511,7 +520,16 @@ display.display();
   } else {
     Serial.println("ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...");
   }
+
+ // ==========
+  timeClient.begin();
+ // ==========
+  
   WiFi.disconnect();
 }
 
-void loop() {}
+void loop() {
+  timeClient.update();
+  Serial.println(timeClient.getFormattedTime());
+  delay(1000);
+  }
