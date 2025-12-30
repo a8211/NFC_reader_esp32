@@ -5,7 +5,7 @@
  *  zegar
  *  zczytywanie kart
  *  logs
- * 
+ *  konsola w pliku txt (pobieranie pliku txt z githuba co 1 min i sprawdzanie komend w nim)
 */
 
 
@@ -79,14 +79,8 @@ const int fileCountDownload = sizeof(filesToDownload) / sizeof(filesToDownload[0
 #define SCREEN_ADDRESS 0x3C
 SSD1306Wire display(SCREEN_ADDRESS, I2C_SDA_PIN, I2C_SCL_PIN);
 
+int iteration = 0;
 
-byte year;
-byte month;
-byte date;
-byte dOW;
-byte hour;
-byte minute;
-byte second;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -463,6 +457,30 @@ void DisplayStart(){
   display.display();
 }
 
+void TimeShit() {
+  timeClient.update();
+  if(timeClient.getMinutes() == 1 or iteration == 0){
+    Serial.println("Updating Time");
+    DateTime now = rtc.now();
+    int Y = now.year();
+    int M = now.month();
+    int D = now.day();
+    int H = timeClient.getHours();
+    int Mi = timeClient.getMinutes();
+    int S = timeClient.getSeconds();
+    rtc.adjust(DateTime(Y, M, D, H, Mi, S));
+    iteration = 1;
+  }
+// raz na godzine ^^
+}
+
+void GetTime() {
+    DateTime now = rtc.now();
+    String tme;
+    tme += "Aktualny czas: " + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " ";
+    tme += String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second());
+    Serial.println(tme);
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setup() {
@@ -526,7 +544,7 @@ display.display();
         Serial.println("🔁 Rollback zakończony sukcesem. Restart...");
         ESP.restart();
       } else {
-        Serial.println("❌ Rollback nieudany! Urządzenie w stanie awaryjnym.");
+        Serial.println("❌ Rollback nieudany! Urządzenie w stanie niepewnym.");
       }
     }
   } else {
@@ -534,21 +552,26 @@ display.display();
   }
 
  // ==========
+ 
   timeClient.begin();
- // ==========
+  timeClient.update();
+  
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
   if (!rtc.begin()) {
     Serial.println("DS3231 nie wykryty.");
   }
-
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); 
+  
  // ==========
-
- 
-  //WiFi.disconnect();
 }
 
 void loop() {
-  timeClient.update();
-  Serial.println(timeClient.getFormattedTime());
-  delay(1000);
+
+  TimeShit();
+  GetTime();
+
+    
+  delay(100);
+
+
   }
