@@ -1,7 +1,7 @@
 /*  update z wifi d
  *  karta sd d
  *  display d
- *  ntp
+ *  ntp d
  *  zegar
  *  zczytywanie kart
  *  logs
@@ -22,6 +22,8 @@
 #include <SSD1306Wire.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <RTClib.h>
+#include <Wire.h>
 
 ////
 
@@ -47,7 +49,7 @@ const char* branch = "main";
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 7200);
-
+RTC_DS3231 rtc;
 
 // Twój token GitHub (PRYWATNY!)
 const char* githubToken = "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";
@@ -76,6 +78,15 @@ const int fileCountDownload = sizeof(filesToDownload) / sizeof(filesToDownload[0
 
 #define SCREEN_ADDRESS 0x3C
 SSD1306Wire display(SCREEN_ADDRESS, I2C_SDA_PIN, I2C_SCL_PIN);
+
+
+byte year;
+byte month;
+byte date;
+byte dOW;
+byte hour;
+byte minute;
+byte second;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -525,7 +536,14 @@ display.display();
  // ==========
   timeClient.begin();
  // ==========
-  
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+  if (!rtc.begin()) {
+    Serial.println("DS3231 nie wykryty.");
+  }
+
+ // ==========
+
+ 
   //WiFi.disconnect();
 }
 
