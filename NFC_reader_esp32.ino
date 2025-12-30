@@ -50,7 +50,8 @@ NTPClient timeClient(ntpUDP);
 
 
 // Twój token GitHub (PRYWATNY!)
-const char* githubToken = "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";
+const char* githubToken = "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";
+
 
 WiFiClientSecure client;
 
@@ -525,7 +526,7 @@ display.display();
   timeClient.begin();
  // ==========
   
-  WiFi.disconnect();
+  //WiFi.disconnect();
 }
 
 void loop() {
