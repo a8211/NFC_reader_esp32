@@ -46,7 +46,7 @@ const char* branch = "main";
 
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP);
+NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 7200);
 
 
 // Twój token GitHub (PRYWATNY!)
