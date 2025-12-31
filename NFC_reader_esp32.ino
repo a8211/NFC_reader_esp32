@@ -2,10 +2,11 @@
  *  karta sd d
  *  display d
  *  ntp d
- *  zegar
+ *  zegar d
  *  zczytywanie kart
  *  logs
  *  konsola w pliku txt (pobieranie pliku txt z githuba co 1 min i sprawdzanie komend w nim)
+ *  zeby bez wifi tez dzialalo
 */
 
 
@@ -457,6 +458,8 @@ void DisplayStart(){
   display.display();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void TimeShit() {
   timeClient.update();
   if(timeClient.getMinutes() == 1 or iteration == 0){
@@ -483,10 +486,32 @@ void GetTime() {
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+String Logs(String x) {
+  Serial.println(x);
+  File Log = SD.open("Logs.txt", FILE_WRITE);
+  if (Log) {
+    Log.println(x);
+    Log.flush();
+    Log.close();
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
-
+  
+  SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SD_CS);
+  if (!SD.begin(SD_CS)) {
+    Serial.println("❌ Błąd SD!");
+    display.clear();
+    display.drawString(0, 0, "Karta SD nie wykryta");
+    display.display();
+    return;
+  }
+  Serial.println("💾 Karta SD gotowa!");
+  
   Serial.println("\n🔌 Start ESP32...");
   DisplayStart();
   WiFi.begin(ssid, password);
@@ -498,19 +523,11 @@ void setup() {
   Serial.println("\n✅ Połączono!");
   Serial.println(WiFi.localIP());
 
-    display.clear();
-    display.drawString(0, 0, "Polaczono z WIFI");
-    display.display();
+  display.clear();
+  display.drawString(0, 0, "Polaczono z WIFI");
+  display.display();
 
-  SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SD_CS);
-  if (!SD.begin(SD_CS)) {
-    Serial.println("❌ Błąd SD!");
-    display.clear();
-    display.drawString(0, 0, "Karta SD nie wykryta");
-    display.display();
-    return;
-  }
-  Serial.println("💾 Karta SD gotowa!");
+  
 
  // ==========
 
@@ -574,4 +591,4 @@ void loop() {
   delay(100);
 
 
-  }
+}
