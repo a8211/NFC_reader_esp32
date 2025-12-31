@@ -1,0 +1,33 @@
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:3] 
+✅ Połączono!
+[2000-1-1 0:0:3] 192.168.1.32
+[2000-1-1 0:1:2] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:1:7] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:1:7] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:3] 
+✅ Połączono!
+[2000-1-1 0:0:3] 192.168.1.32
+[2000-1-1 0:0:56] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:1:2] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:1:2] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:3] 
+✅ Połączono!
+[2000-1-1 0:0:3] 192.168.1.32
+[2000-1-1 0:1:3] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:1:8] 💾 SHA nowego pliku: 3b8ad5cc2233a77acbb5e1b0c9760d827d495aef421021de5db01dffb7df1975
+[2000-1-1 0:1:8] 📄 SHA poprzedniego: c4c4ddd70109ffd26670b47b6e7731e2087e0fdde0bc4bff4f6f6dcaf0f34de6
+[2000-1-1 0:1:8] 🆕 Nowe oprogramowanie wykryte! Aktualizacja...
+[2000-1-1 0:1:8] 📤 Uploadowanie plików z /logs
