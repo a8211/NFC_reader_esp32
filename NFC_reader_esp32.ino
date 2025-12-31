@@ -166,7 +166,7 @@ bool downloadFile(const char* url, const char* path) {
 
   Serial.printf("🔗 Pobieranie pliku: %s\n", url);
   if (!http.begin(client, url)) {
-    Serial.println("❌ Nie udało się rozpocząć połączenia HTTP!");
+    Logs("❌ Nie udało się rozpocząć połączenia HTTP!");
     return false;
   }
 
@@ -179,14 +179,14 @@ bool downloadFile(const char* url, const char* path) {
 
   int totalSize = http.getSize();
   if (totalSize <= 0) {
-    Serial.println("⚠️ Brak informacji o rozmiarze pliku!");
+    Logs("⚠️ Brak informacji o rozmiarze pliku!");
   } else {
     Serial.printf("📦 Rozmiar pliku: %d bajtów\n", totalSize);
   }
 
   File file = SD.open(path, FILE_WRITE);
   if (!file) {
-    Serial.println("❌ Nie mogę otworzyć pliku do zapisu!");
+    Logs("❌ Nie mogę otworzyć pliku do zapisu!");
     http.end();
     return false;
   }
@@ -258,7 +258,7 @@ String getDownloadUrl(const char* repoPath) {
     return String(doc["download_url"].as<const char*>());
   }
 
-  Serial.println("⚠️ Brak pola download_url (prawdopodobnie folder, nie plik)");
+  Logs("⚠️ Brak pola download_url (prawdopodobnie folder, nie plik)");
   return "";
 }
 
@@ -278,7 +278,7 @@ void downloadAllFiles() {
 
     downloadFile(downloadUrl.c_str(), targetPath);
   }
-  Serial.println("\n📥 Wszystkie pliki pobrane!");
+  Logs("\n📥 Wszystkie pliki pobrane!");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -322,8 +322,8 @@ fw.close();
   }
 
   if (newSHA != oldSHA && newSHA.length() > 0) {
-    Serial.println("💾 SHA nowego pliku: " + newSHA);
-    Serial.println("📄 SHA poprzedniego: " + oldSHA);
+    Logs("💾 SHA nowego pliku: " + newSHA);
+    Logs("📄 SHA poprzedniego: " + oldSHA);
     return true;
   }
   return false;
@@ -333,13 +333,13 @@ fw.close();
 bool performUpdate() {
   File fw = SD.open(FIRMWARE_PATH);
   if (!fw) {
-    Serial.println("❌ Nie udało się otworzyć pliku firmware!");
+    Logs("❌ Nie udało się otworzyć pliku firmware!");
     return false;
   }
 
   size_t fwSize = fw.size();
   if (fwSize == 0) {
-    Serial.println("⚠️ Plik firmware jest pusty!");
+    Logs("⚠️ Plik firmware jest pusty!");
     fw.close();
     return false;
   }
@@ -353,7 +353,7 @@ bool performUpdate() {
   fw.close();
 
   if (written == fwSize && Update.end(true)) {
-    Serial.println("✅ Firmware zaktualizowany pomyślnie!");
+    Logs("✅ Firmware zaktualizowany pomyślnie!");
     
     display.clear();
     display.drawString(0, 0, "Zaaktualizowano");
@@ -386,13 +386,13 @@ bool rollbackFirmware() {
   const esp_partition_t *last = esp_ota_get_last_invalid_partition();
 
   if (!last) {
-    Serial.println("⚠️ Brak poprzedniej wersji do rollbacku!");
+    Logs("⚠️ Brak poprzedniej wersji do rollbacku!");
     return false;
   }
 
   esp_err_t err = esp_ota_set_boot_partition(last);
   if (err == ESP_OK) {
-    Serial.println("🔁 Rollback ustawiony pomyślnie!");
+    Logs("🔁 Rollback ustawiony pomyślnie!");
     return true;
   } else {
     Serial.printf("❌ Błąd rollbacku: %s\n", esp_err_to_name(err));
@@ -401,7 +401,7 @@ bool rollbackFirmware() {
 }
 
 void debugFirmwareFile() {
-  Serial.println("\n🔍 Sprawdzanie pliku firmware...");
+  Logs("\n🔍 Sprawdzanie pliku firmware...");
 
   // Sprawdź czy plik istnieje
   if (!SD.exists(FIRMWARE_PATH)) {
@@ -430,16 +430,16 @@ void debugFirmwareFile() {
     Serial.print(buffer[i], HEX);
     Serial.print(" ");
   }
-  Serial.println();
+  Logs(" ");
   fw.close();
 
   // Sprawdzenie Update.begin()
   if (fwSize == 0) {
-    Serial.println("⚠️ Rozmiar pliku = 0, Update.begin() nie zostanie wywołane!");
+    Logs("⚠️ Rozmiar pliku = 0, Update.begin() nie zostanie wywołane!");
   } else if (!Update.begin(fwSize)) {
     Serial.printf("❌ Update.begin() nie powiodło się: %s\n", Update.errorString());
   } else {
-    Serial.println("✅ Update.begin() działa poprawnie z tym plikiem.");
+    Logs("✅ Update.begin() działa poprawnie z tym plikiem.");
     Update.end(); // zamykamy od razu, bo to tylko test
   }
 }
@@ -463,7 +463,7 @@ void DisplayStart(){
 void TimeShit() {
   timeClient.update();
   if(timeClient.getMinutes() == 1 or iteration == 0){
-    Serial.println("Updating Time");
+    Logs("Updating Time");
     DateTime now = rtc.now();
     int Y = now.year();
     int M = now.month();
@@ -482,11 +482,11 @@ void GetTime() {
     String tme;
     tme += "Aktualny czas: " + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " ";
     tme += String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second());
-    Serial.println(tme);
+    Logs(tme);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-String Logs(String x) {
+void Logs(String x) {
   Serial.println(x);
   File Log = SD.open("Logs.txt", FILE_WRITE);
   if (Log) {
@@ -504,15 +504,15 @@ void setup() {
   
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SD_CS);
   if (!SD.begin(SD_CS)) {
-    Serial.println("❌ Błąd SD!");
+    Logs("❌ Błąd SD!");
     display.clear();
     display.drawString(0, 0, "Karta SD nie wykryta");
     display.display();
     return;
   }
-  Serial.println("💾 Karta SD gotowa!");
+  Logs("💾 Karta SD gotowa!");
   
-  Serial.println("\n🔌 Start ESP32...");
+  Logs("\n🔌 Start ESP32...");
   DisplayStart();
   WiFi.begin(ssid, password);
   Serial.print("🔗 Łączenie z WiFi");
@@ -520,8 +520,8 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\n✅ Połączono!");
-  Serial.println(WiFi.localIP());
+  Logs("\n✅ Połączono!");
+  Logs(WiFi.localIP().toString());
 
   display.clear();
   display.drawString(0, 0, "Polaczono z WIFI");
@@ -546,26 +546,26 @@ void setup() {
  // ==========
 
   if (checkForNewFirmware()) {
-    Serial.println("🆕 Nowe oprogramowanie wykryte! Aktualizacja...");
+    Logs("🆕 Nowe oprogramowanie wykryte! Aktualizacja...");
 
 display.clear();
 display.drawString(0, 0, "Aktualizowanie...");
 display.display();
 
     if (performUpdate()) {
-      Serial.println("✅ Aktualizacja zakończona sukcesem!");
+      Logs("✅ Aktualizacja zakończona sukcesem!");
       ESP.restart();
     } else {
-      Serial.println("⚠️ Aktualizacja nie powiodła się. Próba rollbacku...");
+      Logs("⚠️ Aktualizacja nie powiodła się. Próba rollbacku...");
       if (rollbackFirmware()) {
-        Serial.println("🔁 Rollback zakończony sukcesem. Restart...");
+        Logs("🔁 Rollback zakończony sukcesem. Restart...");
         ESP.restart();
       } else {
-        Serial.println("❌ Rollback nieudany! Urządzenie w stanie niepewnym.");
+        Logs("❌ Rollback nieudany! Urządzenie w stanie niepewnym.");
       }
     }
   } else {
-    Serial.println("ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...");
+    Logs("ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...");
   }
 
  // ==========
@@ -575,7 +575,7 @@ display.display();
   
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
   if (!rtc.begin()) {
-    Serial.println("DS3231 nie wykryty.");
+    Logs("DS3231 nie wykryty.");
   }
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); 
   
