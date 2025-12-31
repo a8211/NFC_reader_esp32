@@ -4,9 +4,10 @@
  *  ntp d
  *  zegar d
  *  zczytywanie kart
- *  logs
+ *  logs ~ nie wysyła do githuba
  *  konsola w pliku txt (pobieranie pliku txt z githuba co 1 min i sprawdzanie komend w nim)
- *  zeby bez wifi tez dzialalo
+ *  zeby bez wifi tez dzialalo (wpisywanie wifi cred bez modyfikowania ino)
+ *  restart o polnocy
 */
 
 
@@ -25,6 +26,7 @@
 #include <WiFiUdp.h>
 #include <RTClib.h>
 #include <Wire.h>
+#include <time.h>
 
 ////
 
@@ -37,6 +39,7 @@
 
 #define FIRMWARE_PATH "/firmware/NFC_reader_esp32.bin"
 #define SHA_PATH "/last_sha.txt"
+#define MAX_GITHUB_FILE_SIZE (500 * 1024) // 500 KB
 
 // Dane sieci Wi-Fi
 const char* ssid = "Orange_Swiatlowod_8F90";
@@ -46,6 +49,13 @@ const char* password = "3h9N3QLXKHomQ7n5su";
 const char* owner = "a8211";
 const char* repo = "NFC_reader_esp32";
 const char* branch = "main";
+
+const char* monthNames[] = {
+  "none",
+  "styczen", "luty", "marzec", "kwiecien",
+  "maj", "czerwiec", "lipiec", "sierpien",
+  "wrzesien", "pazdziernik", "listopad", "grudzien"
+};
 
 
 WiFiUDP ntpUDP;
@@ -63,7 +73,7 @@ StaticJsonDocument<2048> doc;
 
 // Pierwszy argument = ścieżka na SD (z /), drugi = ścieżka w repo (bez /)
 const char* filesToUpload[][2] = {
-  {"/example.txt", "example.txt"}
+  {"/example.txt", "example.txt"},
 };
 const int fileCount = sizeof(filesToUpload) / sizeof(filesToUpload[0]);
 
@@ -85,76 +95,161 @@ int iteration = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
-String getFileSHA(String path) {
-  HTTPClient http;
-  String url = String("https://api.github.com/repos/") + owner + "/" + repo + "/contents/" + path + "?ref=" + branch;
-  http.begin(client, url);
-  http.addHeader("Authorization", String("token ") + githubToken);
-  http.addHeader("User-Agent", "ESP32");
-
-  int httpCode = http.GET();
-  String sha = "";
-
-  if (httpCode == 200) {
-    String payload = http.getString();
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, payload);
-    if (!error) {
-      sha = doc["sha"].as<String>();
-    }
-  }
-  http.end();
-  return sha;
-}
-
-// ---- Funkcja do uploadu pliku z SD (strumieniowo, bez ładowania całego pliku do RAM) ----
-void uploadFileToGitHub(const char* sdPath, const char* repoPath) {
-  File file = SD.open(sdPath, FILE_READ);
-  if (!file) {
-    Serial.printf("❌ Nie można otworzyć pliku na SD: %s\n", sdPath);
+void uploadAllLogs() {
+  File dir = SD.open("/logs");
+  if (!dir || !dir.isDirectory()) {
+    Logs("❌ Folder /logs nie istnieje");
     return;
   }
 
-  // Pobieramy SHA jeśli plik istnieje
-  String sha = getFileSHA(String(repoPath));
+  Logs("📤 Uploadowanie plików z /logs");
+  File file;
+  while ((file = dir.openNextFile())) {
 
-  // Tworzymy JSON z nagłówkami
-  DynamicJsonDocument doc(4096);
-  doc["message"] = sha.length() > 0 ? "Aktualizacja pliku z ESP32" : "Nowy plik z ESP32";
+    if (file.isDirectory()) {
+      file.close();
+      continue;
+    }
 
-  // Strumieniowe kodowanie Base64
-  String base64Content = "";
-  uint8_t buffer[1024];
-  while (file.available()) {
-    size_t len = file.read(buffer, sizeof(buffer));
-    base64Content += base64::encode(buffer, len);
-    yield(); // aby watchdog nie resetował ESP32
+    String fileName = file.name();
+    size_t size = file.size();
+    file.close();
+
+    if (size == 0) {
+      Serial.printf("⚠️ Pomijam pusty plik: %s\n", fileName.c_str());
+      continue;
+    }
+
+    if (size > MAX_GITHUB_FILE_SIZE) {
+      Serial.printf("❌ %s za duży (%d B)\n", fileName.c_str(), size);
+      continue;
+    }
+
+    String sdPath = String("/logs/") + fileName;
+    String repoPath = String("logs/") + fileName;
+
+    Serial.printf("⬆️ %s → %s\n", sdPath.c_str(), repoPath.c_str());
+
+    uploadFileToGitHub(sdPath.c_str(), repoPath.c_str());
+
+    delay(500); // nie spamuj GitHuba
   }
+
+  dir.close();
+  Logs("✅ Upload logów zakończony");
+}
+
+
+
+String getFileSHA(const String& repoPath) {
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+
+  String url = "https://api.github.com/repos/" + String(owner) + "/" + repo +
+               "/contents/" + repoPath + "?ref=" + branch;
+
+  http.begin(client, url);
+  http.addHeader("User-Agent", "ESP32");
+  http.addHeader("Authorization", String("token ") + githubToken);
+
+  int code = http.GET();
+  if (code != 200) {
+    Serial.printf("❌ Nie udało się pobrać SHA (%d)\n", code);
+    http.end();
+    return "";
+  }
+
+  StaticJsonDocument<1024> doc;
+  deserializeJson(doc, http.getString());
+  http.end();
+
+  return doc["sha"] | "";
+}
+
+
+bool uploadFileToGitHub(const char* sdPath, const char* repoPath) {
+  if (!SD.exists(sdPath)) {
+    Serial.printf("❌ Brak pliku na SD: %s\n", sdPath);
+    return false;
+  }
+
+  File file = SD.open(sdPath, FILE_READ);
+  if (!file) {
+    Serial.printf("❌ Nie można otworzyć: %s\n", sdPath);
+    return false;
+  }
+
+  size_t fileSize = file.size();
+  if (fileSize == 0) {
+    Serial.println("❌ Plik pusty – pomijam");
+    file.close();
+    return false;
+  }
+
+  if (fileSize > MAX_GITHUB_FILE_SIZE) {
+    Serial.printf("❌ Plik za duży (%d B) – max %d B\n",
+                  fileSize, MAX_GITHUB_FILE_SIZE);
+    file.close();
+    return false;
+  }
+
+  // ---- wczytaj CAŁY plik ----
+  uint8_t* buffer = (uint8_t*)malloc(fileSize);
+  if (!buffer) {
+    Serial.println("❌ Brak RAM na plik");
+    file.close();
+    return false;
+  }
+
+  file.read(buffer, fileSize);
   file.close();
 
+  // ---- Base64 JEDEN RAZ ----
+  String base64Content = base64::encode(buffer, fileSize);
+  free(buffer);
+
+  if (base64Content.length() == 0) {
+    Serial.println("❌ Base64 puste");
+    return false;
+  }
+
+  // ---- pobierz SHA jeśli istnieje ----
+  String sha = getFileSHA(String(repoPath));
+
+  // ---- JSON ----
+  StaticJsonDocument<4096> doc;
+  doc["message"] = "Update from ESP32";
   doc["content"] = base64Content;
-  if (sha.length() > 0) doc["sha"] = sha;
+  if (sha.length()) doc["sha"] = sha;
 
-  String jsonPayload;
-  serializeJson(doc, jsonPayload);
+  String payload;
+  serializeJson(doc, payload);
 
-  // ---- Wysyłka ----
+  // ---- HTTP PUT ----
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
-  String url = String("https://api.github.com/repos/") + owner + "/" + repo + "/contents/" + repoPath;
+
+  String url = String("https://api.github.com/repos/")
+               + owner + "/" + repo + "/contents/" + repoPath;
+
   http.begin(client, url);
   http.addHeader("Authorization", String("token ") + githubToken);
   http.addHeader("User-Agent", "ESP32");
   http.addHeader("Content-Type", "application/json");
 
-  int httpCode = http.PUT(jsonPayload);
+  int code = http.PUT(payload);
   String response = http.getString();
   http.end();
 
-  if (httpCode == 201 || httpCode == 200) {
-    Serial.printf("✅ Plik wysłany do GitHub: %s\n", repoPath);
-  } else {
-    Serial.printf("❌ Błąd wysyłki pliku %s: %d\n%s\n", repoPath, httpCode, response.c_str());
+  if (code == 200 || code == 201) {
+    Serial.printf("✅ GitHub OK: %s\n", repoPath);
+    return true;
   }
+
+  Serial.printf("❌ GitHub error %d\n%s\n", code, response.c_str());
+  return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -462,12 +557,18 @@ void DisplayStart(){
 
 void TimeShit() {
   timeClient.update();
+  time_t epoch = timeClient.getEpochTime();
+  struct tm *t = gmtime(&epoch);
+
+
+
+  
   if(timeClient.getMinutes() == 1 or iteration == 0){
     Logs("Updating Time");
     DateTime now = rtc.now();
-    int Y = now.year();
-    int M = now.month();
-    int D = now.day();
+    int Y = t->tm_year + 1900;
+    int M = t->tm_mon + 1;
+    int D = t->tm_mday;
     int H = timeClient.getHours();
     int Mi = timeClient.getMinutes();
     int S = timeClient.getSeconds();
@@ -475,6 +576,7 @@ void TimeShit() {
     iteration = 1;
   }
 // raz na godzine ^^
+
 }
 
 void GetTime() {
@@ -487,11 +589,18 @@ void GetTime() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Logs(String x) {
-  Serial.println(x);
-  File Log = SD.open("Logs.txt", FILE_WRITE);
+  
+  DateTime now = rtc.now();
+  String tme;
+  tme += "[" + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " ";
+  tme += String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second()) + "] " + x;
+  int miesiac = now.month();
+  Serial.println(tme);
+  
+  String path = String("/logs/") + monthNames[miesiac] + now.year() + ".txt";
+  File Log = SD.open(path, FILE_APPEND);
   if (Log) {
-    Log.println(x);
-    Log.flush();
+    Log.println(tme);
     Log.close();
   }
 }
@@ -501,10 +610,24 @@ void Logs(String x) {
 void setup() {
   Serial.begin(115200);
   delay(1000);
+
+ // ==========
+  unsigned long myTime;
+  myTime = millis();
+  myTime = myTime / 1000;
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+  if (!rtc.begin()) {
+    Serial.println("DS3231 nie wykryty.");
+  }
+  rtc.adjust(DateTime(2000, 1, 1, 0, 0, myTime)); 
+
+  
+  
+ // ==========
   
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SD_CS);
   if (!SD.begin(SD_CS)) {
-    Logs("❌ Błąd SD!");
+    Serial.println("❌ Błąd SD!");
     display.clear();
     display.drawString(0, 0, "Karta SD nie wykryta");
     display.display();
@@ -512,13 +635,16 @@ void setup() {
   }
   Logs("💾 Karta SD gotowa!");
   
-  Logs("\n🔌 Start ESP32...");
+  Logs("🔌 Start ESP32...");
   DisplayStart();
   WiFi.begin(ssid, password);
   Serial.print("🔗 Łączenie z WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    if(millis() > 5000){
+      break;
+    }
   }
   Logs("\n✅ Połączono!");
   Logs(WiFi.localIP().toString());
@@ -548,9 +674,11 @@ void setup() {
   if (checkForNewFirmware()) {
     Logs("🆕 Nowe oprogramowanie wykryte! Aktualizacja...");
 
-display.clear();
-display.drawString(0, 0, "Aktualizowanie...");
-display.display();
+  display.clear();
+  display.drawString(0, 0, "Aktualizowanie...");
+  display.display();
+  
+  uploadAllLogs();
 
     if (performUpdate()) {
       Logs("✅ Aktualizacja zakończona sukcesem!");
@@ -569,17 +697,10 @@ display.display();
   }
 
  // ==========
- 
   timeClient.begin();
   timeClient.update();
-  
-  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
-  if (!rtc.begin()) {
-    Logs("DS3231 nie wykryty.");
-  }
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); 
-  
- // ==========
+ 
+
 }
 
 void loop() {
@@ -588,7 +709,7 @@ void loop() {
   GetTime();
 
     
-  delay(100);
+  delay(1000);
 
 
 }
