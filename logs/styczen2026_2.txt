@@ -188,3 +188,36 @@
 Wszystkie pliki pobrane!
 [2026-1-2 22:6:34] Brak nowej wersji firmware. Uruchamianie normalne...
 [2026-1-2 22:6:34] Uploadowanie plików z /logs
+[2026-1-2 22:6:39] Upload logów zakończony
+[2026-1-2 22:6:39] Aktualny czas: 2026-1-2 22:6:39
+[2026-1-2 22:6:40] Aktualny czas: 2026-1-2 22:6:40
+[2026-1-2 22:6:41] Aktualny czas: 2026-1-2 22:6:41
+[2026-1-2 22:6:42] Aktualny czas: 2026-1-2 22:6:42
+[2026-1-2 22:6:43] Aktualny czas: 2026-1-2 22:6:43
+[2026-1-2 22:6:44] Aktualny czas: 2026-1-2 22:6:44
+[2026-1-2 22:6:45] Aktualny czas: 2026-1-2 22:6:45
+[2026-1-2 22:6:46] Aktualny czas: 2026-1-2 22:6:46
+[2026-1-2 22:6:47] Aktualny czas: 2026-1-2 22:6:47
+[2026-1-2 22:6:48] Aktualny czas: 2026-1-2 22:6:48
+[2026-1-2 22:6:50] Aktualny czas: 2026-1-2 22:6:49
+[2026-1-2 22:6:51] Aktualny czas: 2026-1-2 22:6:51
+[2026-1-2 22:6:52] Aktualny czas: 2026-1-2 22:6:52
+[2026-1-2 22:6:53] Aktualny czas: 2026-1-2 22:6:53
+[2026-1-2 22:6:54] Aktualny czas: 2026-1-2 22:6:54
+[2026-1-2 22:6:55] Aktualny czas: 2026-1-2 22:6:55
+[2026-1-2 22:6:56] Aktualny czas: 2026-1-2 22:6:56
+[2026-1-2 22:6:57] Aktualny czas: 2026-1-2 22:6:57
+[2026-1-2 22:6:58] Aktualny czas: 2026-1-2 22:6:58
+[2026-1-2 22:6:59] Aktualny czas: 2026-1-2 22:6:59
+[2026-1-2 22:7:0] Aktualny czas: 2026-1-2 22:7:0
+[2026-1-2 22:7:0] Esp Restrat at 1:00
+[2000-1-1 0:0:1] Karta SD gotowa!
+[2000-1-1 0:0:1] Start ESP32...
+[2000-1-1 0:0:4] 
+ Połączono!
+[2000-1-1 0:0:4] 192.168.1.32
+[2000-1-1 0:0:4] Updating Time
+[2026-1-2 22:8:12] 
+Wszystkie pliki pobrane!
+[2026-1-2 22:8:18] Brak nowej wersji firmware. Uruchamianie normalne...
+[2026-1-2 22:8:18] Uploadowanie plików z /logs
