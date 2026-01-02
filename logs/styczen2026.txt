@@ -1,0 +1,10 @@
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:3] 
+✅ Połączono!
+[2000-1-1 0:0:3] 192.168.1.32
+[2000-1-1 0:0:3] Updating Time
+[2026-1-2 21:38:27] 
+📥 Wszystkie pliki pobrane!
+[2026-1-2 21:38:33] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2026-1-2 21:38:33] 📤 Uploadowanie plików z /logs
