@@ -31,3 +31,82 @@
 [2000-1-1 0:1:8] 📄 SHA poprzedniego: c4c4ddd70109ffd26670b47b6e7731e2087e0fdde0bc4bff4f6f6dcaf0f34de6
 [2000-1-1 0:1:8] 🆕 Nowe oprogramowanie wykryte! Aktualizacja...
 [2000-1-1 0:1:8] 📤 Uploadowanie plików z /logs
+[2000-1-1 0:1:14] ✅ Upload logów zakończony
+[2000-1-1 0:1:23] ✅ Firmware zaktualizowany pomyślnie!
+[2000-1-1 0:1:26] ✅ Aktualizacja zakończona sukcesem!
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:3] 
+✅ Połączono!
+[2000-1-1 0:0:3] 192.168.1.32
+[2000-1-1 0:0:55] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:1:1] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:1:1] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:3] 
+✅ Połączono!
+[2000-1-1 0:0:3] 192.168.1.32
+[2000-1-1 0:1:5] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:1:11] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:1:11] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:5] 
+✅ Połączono!
+[2000-1-1 0:0:5] 0.0.0.0
+[2000-1-1 0:0:5] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:0:8] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:0:10] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:4] 
+✅ Połączono!
+[2000-1-1 0:0:4] 192.168.1.32
+[2000-1-1 0:0:52] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:0:57] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:0:57] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:5] 
+✅ Połączono!
+[2000-1-1 0:0:5] 0.0.0.0
+[2000-1-1 0:0:5] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:0:8] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:0:10] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:3] 
+✅ Połączono!
+[2000-1-1 0:0:3] 192.168.1.32
+[2000-1-1 0:0:58] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:1:4] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:1:4] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:3] 
+✅ Połączono!
+[2000-1-1 0:0:3] 192.168.1.32
+[2000-1-1 0:1:2] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:1:8] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:1:8] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:4] 
+✅ Połączono!
+[2000-1-1 0:0:4] 192.168.1.32
+[2000-1-1 0:1:0] 
+📥 Wszystkie pliki pobrane!
+[2000-1-1 0:1:5] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2000-1-1 0:1:5] 📤 Uploadowanie plików z /logs
