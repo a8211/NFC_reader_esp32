@@ -110,3 +110,22 @@
 📥 Wszystkie pliki pobrane!
 [2000-1-1 0:1:5] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
 [2000-1-1 0:1:5] 📤 Uploadowanie plików z /logs
+[2000-1-1 0:1:13] ✅ Upload logów zakończony
+[2000-1-1 0:1:14] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:4] 
+✅ Połączono!
+[2000-1-1 0:0:4] 192.168.1.32
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:5] 
+✅ Połączono!
+[2000-1-1 0:0:5] 0.0.0.0
+[2000-1-1 0:0:6] Updating Time
+[2000-1-1 0:0:1] 💾 Karta SD gotowa!
+[2000-1-1 0:0:1] 🔌 Start ESP32...
+[2000-1-1 0:0:3] 
+✅ Połączono!
+[2000-1-1 0:0:3] 192.168.1.32
+[2000-1-1 0:0:4] Updating Time
