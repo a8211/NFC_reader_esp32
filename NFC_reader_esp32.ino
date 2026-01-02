@@ -40,6 +40,7 @@
 #define FIRMWARE_PATH "/firmware/NFC_reader_esp32.bin"
 #define SHA_PATH "/last_sha.txt"
 #define MAX_GITHUB_FILE_SIZE (500 * 1024) // 500 KB
+#define MAX_LOG_SIZE 30720  // 30 KB
 
 // Dane sieci Wi-Fi
 const char* ssid = "Orange_Swiatlowod_8F90";
@@ -103,9 +104,9 @@ void uploadAllLogs() {
   }
 
   Logs("📤 Uploadowanie plików z /logs");
+
   File file;
   while ((file = dir.openNextFile())) {
-
     if (file.isDirectory()) {
       file.close();
       continue;
@@ -128,15 +129,51 @@ void uploadAllLogs() {
     String sdPath = String("/logs/") + fileName;
     String repoPath = String("logs/") + fileName;
 
-    Serial.printf("⬆️ %s → %s\n", sdPath.c_str(), repoPath.c_str());
+    Serial.printf("⬆️ %s → %s (%d B)\n", sdPath.c_str(), repoPath.c_str(), size);
 
-    uploadFileToGitHub(sdPath.c_str(), repoPath.c_str());
+    if (!uploadFileToGitHub(sdPath.c_str(), repoPath.c_str())) {
+      Serial.printf("❌ Upload nieudany: %s\n", fileName.c_str());
+    }
 
     delay(500); // nie spamuj GitHuba
   }
 
   dir.close();
   Logs("✅ Upload logów zakończony");
+}
+
+
+bool readFileAsBase64(const char* path, String &out) {
+  File file = SD.open(path, FILE_READ);
+  if (!file) return false;
+
+  size_t fileSize = file.size();
+  if (fileSize == 0) {
+    file.close();
+    return false;
+  }
+
+  // Base64 = ~1.37x
+  out.reserve((fileSize * 4) / 3 + 16);
+
+  const size_t CHUNK = 768; // musi być podzielne przez 3
+  uint8_t buffer[CHUNK];
+
+  while (file.available()) {
+    size_t len = file.read(buffer, CHUNK);
+    if (len == 0) break;
+
+    String part = base64::encode(buffer, len);
+    if (part.length() == 0) {
+      file.close();
+      return false;
+    }
+    out += part;
+    yield(); // bardzo ważne
+  }
+
+  file.close();
+  return out.length() > 0;
 }
 
 
@@ -154,20 +191,30 @@ String getFileSHA(const String& repoPath) {
   http.addHeader("Authorization", String("token ") + githubToken);
 
   int code = http.GET();
-  if (code != 200) {
+  String sha = "";
+
+  if (code == 200) {
+    StaticJsonDocument<1024> doc;
+    DeserializationError err = deserializeJson(doc, http.getString());
+    if (!err) {
+      sha = doc["sha"] | "";
+    } else {
+      Serial.printf("❌ Błąd JSON przy SHA: %s\n", err.c_str());
+    }
+  } else if (code == 404) {
+    // Plik nie istnieje → nowy plik, SHA pozostaje pusty
+    sha = "";
+  } else {
     Serial.printf("❌ Nie udało się pobrać SHA (%d)\n", code);
-    http.end();
-    return "";
   }
 
-  StaticJsonDocument<1024> doc;
-  deserializeJson(doc, http.getString());
   http.end();
-
-  return doc["sha"] | "";
+  return sha;
 }
 
 
+
+// ---- Upload jednego pliku do GitHub (SD -> GitHub) ----
 bool uploadFileToGitHub(const char* sdPath, const char* repoPath) {
   if (!SD.exists(sdPath)) {
     Serial.printf("❌ Brak pliku na SD: %s\n", sdPath);
@@ -176,36 +223,28 @@ bool uploadFileToGitHub(const char* sdPath, const char* repoPath) {
 
   File file = SD.open(sdPath, FILE_READ);
   if (!file) {
-    Serial.printf("❌ Nie można otworzyć: %s\n", sdPath);
+    Serial.printf("❌ Nie można otworzyć pliku: %s\n", sdPath);
     return false;
   }
 
   size_t fileSize = file.size();
   if (fileSize == 0) {
-    Serial.println("❌ Plik pusty – pomijam");
+    Serial.println("⚠️ Plik pusty – pomijam");
     file.close();
     return false;
   }
 
-  if (fileSize > MAX_GITHUB_FILE_SIZE) {
-    Serial.printf("❌ Plik za duży (%d B) – max %d B\n",
-                  fileSize, MAX_GITHUB_FILE_SIZE);
-    file.close();
-    return false;
-  }
-
-  // ---- wczytaj CAŁY plik ----
+  // ---- wczytaj cały plik ----
   uint8_t* buffer = (uint8_t*)malloc(fileSize);
   if (!buffer) {
     Serial.println("❌ Brak RAM na plik");
     file.close();
     return false;
   }
-
   file.read(buffer, fileSize);
   file.close();
 
-  // ---- Base64 JEDEN RAZ ----
+  // ---- Base64 ----
   String base64Content = base64::encode(buffer, fileSize);
   free(buffer);
 
@@ -221,7 +260,7 @@ bool uploadFileToGitHub(const char* sdPath, const char* repoPath) {
   StaticJsonDocument<4096> doc;
   doc["message"] = "Update from ESP32";
   doc["content"] = base64Content;
-  if (sha.length()) doc["sha"] = sha;
+  if (sha.length() > 0) doc["sha"] = sha; // dodajemy SHA tylko jeśli istnieje
 
   String payload;
   serializeJson(doc, payload);
@@ -231,8 +270,7 @@ bool uploadFileToGitHub(const char* sdPath, const char* repoPath) {
   client.setInsecure();
   HTTPClient http;
 
-  String url = String("https://api.github.com/repos/")
-               + owner + "/" + repo + "/contents/" + repoPath;
+  String url = String("https://api.github.com/repos/") + owner + "/" + repo + "/contents/" + repoPath;
 
   http.begin(client, url);
   http.addHeader("Authorization", String("token ") + githubToken);
@@ -556,12 +594,15 @@ void DisplayStart(){
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void TimeShit() {
+
+  if (rtc.lostPower()) {
+    Serial.println("RTC lost power, let's set the time!");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
+  
   timeClient.update();
   time_t epoch = timeClient.getEpochTime();
   struct tm *t = gmtime(&epoch);
-
-
-
   
   if(timeClient.getMinutes() == 1 or iteration == 0){
     Logs("Updating Time");
@@ -588,7 +629,7 @@ void GetTime() {
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Logs(String x) {
+/*void Logs(String x) {
   
   DateTime now = rtc.now();
   String tme;
@@ -604,6 +645,44 @@ void Logs(String x) {
     Log.close();
   }
 }
+*/
+String getLogFileName() {
+  String baseName = "/logs/styczen2026.txt"; // zmień na dynamiczną datę jeśli chcesz
+  int index = 0;
+  String fileName = baseName;
+
+  while (SD.exists(fileName)) {
+    File f = SD.open(fileName, FILE_READ);
+    if (f.size() < MAX_LOG_SIZE) {
+      f.close();
+      break; // plik jest poniżej limitu
+    }
+    f.close();
+    index++;
+    fileName = baseName.substring(0, baseName.lastIndexOf('.')) +
+               "_" + String(index) +
+               baseName.substring(baseName.lastIndexOf('.'));
+  }
+
+  return fileName;
+}
+
+void Logs(const String &msg) {
+  String fileName = getLogFileName();
+  File logFile = SD.open(fileName, FILE_APPEND);
+  if (!logFile) {
+    Serial.println("❌ Nie udało się otworzyć pliku logu");
+    return;
+  }
+  
+  DateTime now = rtc.now();
+  String line = "[" + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " " + String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second()) + "] " + msg + "\n";
+  logFile.print(line);
+  logFile.close();
+
+  Serial.print(line); // wypis do Serial
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -649,6 +728,8 @@ void setup() {
   Logs("\n✅ Połączono!");
   Logs(WiFi.localIP().toString());
 
+  TimeShit();
+
   display.clear();
   display.drawString(0, 0, "Polaczono z WIFI");
   display.display();
@@ -677,8 +758,6 @@ void setup() {
   display.clear();
   display.drawString(0, 0, "Aktualizowanie...");
   display.display();
-  
-  uploadAllLogs();
 
     if (performUpdate()) {
       Logs("✅ Aktualizacja zakończona sukcesem!");
@@ -697,6 +776,9 @@ void setup() {
   }
 
  // ==========
+
+  uploadAllLogs();
+  
   timeClient.begin();
   timeClient.update();
  
