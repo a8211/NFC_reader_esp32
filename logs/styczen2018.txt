@@ -37,3 +37,10 @@
 [2018-1-1 2:0:32] Aktualny czas: 2018-1-1 2:0:32
 [2018-1-1 2:0:34] Aktualny czas: 2018-1-1 2:0:34
 [2018-1-1 2:0:36] Aktualny czas: 2018-1-1 2:0:36
+[2018-1-1 2:0:6] 
+📥 Wszystkie pliki pobrane!
+[2018-1-1 2:0:8] ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...
+[2018-1-1 2:0:8] 📤 Uploadowanie plików z /logs
+[2018-1-1 2:0:12] ✅ Upload logów zakończony
+[2018-1-1 2:0:14] Aktualny czas: 2018-1-1 2:0:14
+[2018-1-1 2:0:16] Aktualny czas: 2018-1-1 2:0:16
