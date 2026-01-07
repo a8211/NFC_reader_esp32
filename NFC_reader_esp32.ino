@@ -4,10 +4,10 @@
  *  ntp d
  *  zegar d
  *  zczytywanie kart
- *  logs ~ nie wysyła do githuba
+ *  logs ~ nie wysyła plików do githuba
  *  konsola w pliku txt (pobieranie pliku txt z githuba co 1 min i sprawdzanie komend w nim)
- *  zeby bez wifi tez dzialalo (wpisywanie wifi cred bez modyfikowania ino)
- *  restart o polnocy
+ *  zeby bez wifi tez dzialalo (wpisywanie wifi cred bez modyfikowania ino) d
+ *  restart o polnocy d
 */
 
 
@@ -27,6 +27,8 @@
 #include <RTClib.h>
 #include <Wire.h>
 #include <time.h>
+#include <Preferences.h>
+//#include <Adafruit_PN532.h>
 
 ////
 
@@ -39,12 +41,9 @@
 
 #define FIRMWARE_PATH "/firmware/NFC_reader_esp32.bin"
 #define SHA_PATH "/last_sha.txt"
-#define MAX_GITHUB_FILE_SIZE (500 * 1024) // 500 KB
 #define MAX_LOG_SIZE 30720  // 30 KB
 
-// Dane sieci Wi-Fi
-const char* ssid = "Orange_Swiatlowod_8F90";
-const char* password = "3h9N3QLXKHomQ7n5su";
+
 
 // Dane repozytorium
 const char* owner = "a8211";
@@ -62,6 +61,7 @@ const char* monthNames[] = {
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 7200);
 RTC_DS3231 rtc;
+Preferences prefs;
 
 // Twój token GitHub (PRYWATNY!)
 const char* githubToken = "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";
@@ -92,89 +92,28 @@ const int fileCountDownload = sizeof(filesToDownload) / sizeof(filesToDownload[0
 SSD1306Wire display(SCREEN_ADDRESS, I2C_SDA_PIN, I2C_SCL_PIN);
 
 int iteration = 0;
+bool dev;
+
+
+#define NFC_SDA 14
+#define NFC_SCL 27
+
+TwoWire WireNFC = TwoWire(1);
+
+// Adafruit_PN532 nfc(NFC_SDA, NFC_SCL, &WireNFC);
+
+#define NFC_INTERFACE_I2C
+  #include <Wire.h>
+  #include <PN532_I2C.h>
+  #include <PN532_I2C.cpp>
+  #include <PN532.h>
+  
+  PN532_I2C pn532i2c(WireNFC);
+  PN532 nfc(pn532i2c);
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void uploadAllLogs() {
-  File dir = SD.open("/logs");
-  if (!dir || !dir.isDirectory()) {
-    Logs("❌ Folder /logs nie istnieje");
-    return;
-  }
-
-  Logs("📤 Uploadowanie plików z /logs");
-
-  File file;
-  while ((file = dir.openNextFile())) {
-    if (file.isDirectory()) {
-      file.close();
-      continue;
-    }
-
-    String fileName = file.name();
-    size_t size = file.size();
-    file.close();
-
-    if (size == 0) {
-      Serial.printf("⚠️ Pomijam pusty plik: %s\n", fileName.c_str());
-      continue;
-    }
-
-    if (size > MAX_GITHUB_FILE_SIZE) {
-      Serial.printf("❌ %s za duży (%d B)\n", fileName.c_str(), size);
-      continue;
-    }
-
-    String sdPath = String("/logs/") + fileName;
-    String repoPath = String("logs/") + fileName;
-
-    Serial.printf("⬆️ %s → %s (%d B)\n", sdPath.c_str(), repoPath.c_str(), size);
-
-    if (!uploadFileToGitHub(sdPath.c_str(), repoPath.c_str())) {
-      Serial.printf("❌ Upload nieudany: %s\n", fileName.c_str());
-    }
-
-    delay(500); // nie spamuj GitHuba
-  }
-
-  dir.close();
-  Logs("✅ Upload logów zakończony");
-}
-
-
-bool readFileAsBase64(const char* path, String &out) {
-  File file = SD.open(path, FILE_READ);
-  if (!file) return false;
-
-  size_t fileSize = file.size();
-  if (fileSize == 0) {
-    file.close();
-    return false;
-  }
-
-  // Base64 = ~1.37x
-  out.reserve((fileSize * 4) / 3 + 16);
-
-  const size_t CHUNK = 768; // musi być podzielne przez 3
-  uint8_t buffer[CHUNK];
-
-  while (file.available()) {
-    size_t len = file.read(buffer, CHUNK);
-    if (len == 0) break;
-
-    String part = base64::encode(buffer, len);
-    if (part.length() == 0) {
-      file.close();
-      return false;
-    }
-    out += part;
-    yield(); // bardzo ważne
-  }
-
-  file.close();
-  return out.length() > 0;
-}
 
 
 
@@ -299,7 +238,7 @@ bool downloadFile(const char* url, const char* path) {
 
   Serial.printf("🔗 Pobieranie pliku: %s\n", url);
   if (!http.begin(client, url)) {
-    Logs("❌ Nie udało się rozpocząć połączenia HTTP!");
+    Logs("Nie udało się rozpocząć połączenia HTTP!");
     return false;
   }
 
@@ -312,14 +251,14 @@ bool downloadFile(const char* url, const char* path) {
 
   int totalSize = http.getSize();
   if (totalSize <= 0) {
-    Logs("⚠️ Brak informacji o rozmiarze pliku!");
+    Logs("Brak informacji o rozmiarze pliku!");
   } else {
     Serial.printf("📦 Rozmiar pliku: %d bajtów\n", totalSize);
   }
 
   File file = SD.open(path, FILE_WRITE);
   if (!file) {
-    Logs("❌ Nie mogę otworzyć pliku do zapisu!");
+    Logs("Nie mogę otworzyć pliku do zapisu!");
     http.end();
     return false;
   }
@@ -391,7 +330,7 @@ String getDownloadUrl(const char* repoPath) {
     return String(doc["download_url"].as<const char*>());
   }
 
-  Logs("⚠️ Brak pola download_url (prawdopodobnie folder, nie plik)");
+  Logs("Brak pola download_url (prawdopodobnie folder, nie plik)");
   return "";
 }
 
@@ -411,7 +350,7 @@ void downloadAllFiles() {
 
     downloadFile(downloadUrl.c_str(), targetPath);
   }
-  Logs("\n📥 Wszystkie pliki pobrane!");
+  Logs("Wszystkie pliki pobrane!");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -455,8 +394,8 @@ fw.close();
   }
 
   if (newSHA != oldSHA && newSHA.length() > 0) {
-    Logs("💾 SHA nowego pliku: " + newSHA);
-    Logs("📄 SHA poprzedniego: " + oldSHA);
+    Logs("SHA nowego pliku: " + newSHA);
+    Logs("SHA poprzedniego: " + oldSHA);
     return true;
   }
   return false;
@@ -466,13 +405,13 @@ fw.close();
 bool performUpdate() {
   File fw = SD.open(FIRMWARE_PATH);
   if (!fw) {
-    Logs("❌ Nie udało się otworzyć pliku firmware!");
+    Logs("Nie udało się otworzyć pliku firmware!");
     return false;
   }
 
   size_t fwSize = fw.size();
   if (fwSize == 0) {
-    Logs("⚠️ Plik firmware jest pusty!");
+    Logs("Plik firmware jest pusty!");
     fw.close();
     return false;
   }
@@ -486,7 +425,7 @@ bool performUpdate() {
   fw.close();
 
   if (written == fwSize && Update.end(true)) {
-    Logs("✅ Firmware zaktualizowany pomyślnie!");
+    Logs("Firmware zaktualizowany pomyślnie!");
     
     display.clear();
     display.drawString(0, 0, "Zaaktualizowano");
@@ -519,13 +458,13 @@ bool rollbackFirmware() {
   const esp_partition_t *last = esp_ota_get_last_invalid_partition();
 
   if (!last) {
-    Logs("⚠️ Brak poprzedniej wersji do rollbacku!");
+    Logs("Brak poprzedniej wersji do rollbacku!");
     return false;
   }
 
   esp_err_t err = esp_ota_set_boot_partition(last);
   if (err == ESP_OK) {
-    Logs("🔁 Rollback ustawiony pomyślnie!");
+    Logs("Rollback ustawiony pomyślnie!");
     return true;
   } else {
     Serial.printf("❌ Błąd rollbacku: %s\n", esp_err_to_name(err));
@@ -534,7 +473,7 @@ bool rollbackFirmware() {
 }
 
 void debugFirmwareFile() {
-  Logs("\n🔍 Sprawdzanie pliku firmware...");
+  Logs("\nSprawdzanie pliku firmware...");
 
   // Sprawdź czy plik istnieje
   if (!SD.exists(FIRMWARE_PATH)) {
@@ -568,11 +507,11 @@ void debugFirmwareFile() {
 
   // Sprawdzenie Update.begin()
   if (fwSize == 0) {
-    Logs("⚠️ Rozmiar pliku = 0, Update.begin() nie zostanie wywołane!");
+    Logs("Rozmiar pliku = 0, Update.begin() nie zostanie wywołane!");
   } else if (!Update.begin(fwSize)) {
     Serial.printf("❌ Update.begin() nie powiodło się: %s\n", Update.errorString());
   } else {
-    Logs("✅ Update.begin() działa poprawnie z tym plikiem.");
+    Logs("Update.begin() działa poprawnie z tym plikiem.");
     Update.end(); // zamykamy od razu, bo to tylko test
   }
 }
@@ -593,15 +532,76 @@ void DisplayStart(){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void saveWiFi(const char* ssid, const char* pass) {
+  prefs.begin("wifi", false);
+  prefs.putString("ssid", ssid);
+  prefs.putString("pass", pass);
+  prefs.end();
+}
+
+bool loadWiFi(String& ssid, String& pass) {
+  prefs.begin("wifi", true);      // true = tylko odczyt
+  ssid = prefs.getString("ssid", "");
+  pass = prefs.getString("pass", "");
+  prefs.end();
+
+  return ssid.length() > 0;
+}
+
+void SerialCommands(){
+  if (Serial.available()) {
+    String line = Serial.readStringUntil('\n');
+    line.trim();
+
+    if (line.startsWith("wifi ")) {
+      int sp = line.indexOf(' ', 5);
+      if (sp > 0) {
+        String ssid = line.substring(5, sp);
+        String pass = line.substring(sp + 1);
+        saveWiFi(ssid.c_str(), pass.c_str());
+        ESP.restart();
+      }
+    }
+    
+    if (line.startsWith("dev")) {
+      Serial.println("dev mode");
+      saveDevMode();
+      }
+    
+  }
+}
+
+void loadDevMode(){
+  prefs.begin("devMode", true);
+  dev = prefs.getBool("devM", "");
+  prefs.end();
+}
+
+
+void saveDevMode(){
+  if(dev == true){
+    prefs.begin("devMode", false);
+    prefs.putBool("devM", false);
+    prefs.end();
+  } else { 
+    prefs.begin("devMode", false);
+    prefs.putBool("devM", true);
+    prefs.end();
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void TimeShit() {
 
   if (rtc.lostPower()) {
     Serial.println("RTC lost power, let's set the time!");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
-  
-  timeClient.update();
-  time_t epoch = timeClient.getEpochTime();
+
+  if(WiFi.status() == WL_CONNECTED) {
+    timeClient.update();
+    time_t epoch = timeClient.getEpochTime();
   struct tm *t = gmtime(&epoch);
   
   if(timeClient.getMinutes() == 1 or iteration == 0){
@@ -615,9 +615,9 @@ void TimeShit() {
     int S = timeClient.getSeconds();
     rtc.adjust(DateTime(Y, M, D, H, Mi, S));
     iteration = 1;
+  } else { }
+// raz na godzine jeśli wifi jest ^^
   }
-// raz na godzine ^^
-
 }
 
 void GetTime() {
@@ -629,58 +629,32 @@ void GetTime() {
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/*void Logs(String x) {
-  
-  DateTime now = rtc.now();
-  String tme;
-  tme += "[" + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " ";
-  tme += String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second()) + "] " + x;
-  int miesiac = now.month();
-  Serial.println(tme);
-  
-  String path = String("/logs/") + monthNames[miesiac] + now.year() + ".txt";
-  File Log = SD.open(path, FILE_APPEND);
-  if (Log) {
-    Log.println(tme);
-    Log.close();
-  }
-}
-*/
-String getLogFileName() {
-  String baseName = "/logs/styczen2026.txt"; // zmień na dynamiczną datę jeśli chcesz
-  int index = 0;
-  String fileName = baseName;
 
-  while (SD.exists(fileName)) {
-    File f = SD.open(fileName, FILE_READ);
-    if (f.size() < MAX_LOG_SIZE) {
-      f.close();
-      break; // plik jest poniżej limitu
-    }
-    f.close();
-    index++;
-    fileName = baseName.substring(0, baseName.lastIndexOf('.')) +
-               "_" + String(index) +
-               baseName.substring(baseName.lastIndexOf('.'));
-  }
 
-  return fileName;
+void Logs(String x) { 
+  DateTime now = rtc.now(); 
+  String tme; 
+  tme += "[" + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " "; 
+  tme += String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second()) + "] " + x; 
+  int miesiac = now.month(); 
+  Serial.println(tme); 
+  String path = String("/logs/") + now.day() + monthNames[miesiac] + now.year() + ".txt"; 
+  File Log = SD.open(path, FILE_APPEND); 
+  if (Log) { 
+    Log.println(tme); 
+    Log.close(); 
+  } 
 }
 
-void Logs(const String &msg) {
-  String fileName = getLogFileName();
-  File logFile = SD.open(fileName, FILE_APPEND);
-  if (!logFile) {
-    Serial.println("❌ Nie udało się otworzyć pliku logu");
-    return;
-  }
-  
-  DateTime now = rtc.now();
-  String line = "[" + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " " + String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second()) + "] " + msg + "\n";
-  logFile.print(line);
-  logFile.close();
 
-  Serial.print(line); // wypis do Serial
+void CheckTimeForRestart(){
+  DateTime now = rtc.now();
+  if (now.hour() == 23 and now.minute() == 1) {
+    Logs("Esp Restrat at 1:00");
+    WiFi.disconnect();
+    delay(1000);
+    ESP.restart();
+  }
 }
 
 
@@ -690,19 +664,49 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
+
+
  // ==========
   unsigned long myTime;
   myTime = millis();
   myTime = myTime / 1000;
+
+  delay(3000);
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+
+  DisplayStart();
+
+/*
+  Serial.println("\nI2C Scanner");
+  byte count = 0;
+  for (byte i = 1; i < 127; i++) {
+    Wire.beginTransmission(i);
+    if (Wire.endTransmission() == 0) {
+      Serial.print("Found device at 0x");
+      Serial.println(i, HEX);
+      count++;
+    }
+  }
+  Serial.print("Found ");
+  Serial.print(count);
+  Serial.println(" device(s).");
+ */
+
+
+
+  
   if (!rtc.begin()) {
     Serial.println("DS3231 nie wykryty.");
   }
-  rtc.adjust(DateTime(2000, 1, 1, 0, 0, myTime)); 
+  //rtc.adjust(DateTime(2000, 1, 1, 0, 0, myTime)); 
+
+  loadDevMode();
 
   
   
  // ==========
+
+
   
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SD_CS);
   if (!SD.begin(SD_CS)) {
@@ -712,22 +716,28 @@ void setup() {
     display.display();
     return;
   }
-  Logs("💾 Karta SD gotowa!");
+  Logs("Karta SD gotowa!");
+  Logs("Start ESP32...");
   
-  Logs("🔌 Start ESP32...");
-  DisplayStart();
-  WiFi.begin(ssid, password);
-  Serial.print("🔗 Łączenie z WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-    if(millis() > 5000){
-      break;
+
+  String ssid, pass;
+
+  if (loadWiFi(ssid, pass)) {
+    Logs("Łączenie z ");
+    Logs(ssid);
+    WiFi.begin(ssid.c_str(), pass.c_str());
+    if (WiFi.waitForConnectResult() == WL_CONNECTED or millis() > 5000) {
+      Logs("WiFi połączone");
+    } else {
+      Logs("Nie udało się połączyć");
     }
+  } else {
+    Logs("Brak zapisanych danych WiFi");
   }
-  Logs("\n✅ Połączono!");
+
   Logs(WiFi.localIP().toString());
 
+  if(WiFi.status() == WL_CONNECTED) {
   TimeShit();
 
   display.clear();
@@ -743,8 +753,10 @@ void setup() {
     display.clear();
     display.drawString(0, 0, "Pobieranie plikow");
     display.display();
-  
-  downloadAllFiles();
+
+  if(dev == true){
+    downloadAllFiles();
+  }
   
   for (int i = 0; i < fileCount; i++) {
     uploadFileToGitHub(filesToUpload[i][0], filesToUpload[i][1]);
@@ -753,45 +765,85 @@ void setup() {
  // ==========
 
   if (checkForNewFirmware()) {
-    Logs("🆕 Nowe oprogramowanie wykryte! Aktualizacja...");
+    Logs("Nowe oprogramowanie wykryte! Aktualizacja...");
 
   display.clear();
   display.drawString(0, 0, "Aktualizowanie...");
   display.display();
 
     if (performUpdate()) {
-      Logs("✅ Aktualizacja zakończona sukcesem!");
+      Logs("Aktualizacja zakończona sukcesem!");
       ESP.restart();
     } else {
-      Logs("⚠️ Aktualizacja nie powiodła się. Próba rollbacku...");
+      Logs("Aktualizacja nie powiodła się. Próba rollbacku...");
       if (rollbackFirmware()) {
-        Logs("🔁 Rollback zakończony sukcesem. Restart...");
+        Logs("Rollback zakończony sukcesem. Restart...");
         ESP.restart();
       } else {
-        Logs("❌ Rollback nieudany! Urządzenie w stanie niepewnym.");
+        Logs("Rollback nieudany! Urządzenie w stanie niepewnym.");
       }
     }
   } else {
-    Logs("ℹ️ Brak nowej wersji firmware. Uruchamianie normalne...");
+    Logs("Brak nowej wersji firmware. Uruchamianie normalne...");
   }
 
  // ==========
-
-  uploadAllLogs();
   
   timeClient.begin();
   timeClient.update();
- 
+  }
+  
+  WireNFC.begin(NFC_SDA, NFC_SCL);
+  delay(1000);
+  nfc.begin();
+  nfc.SAMConfig();
+  
+  uint32_t versiondata = nfc.getFirmwareVersion();
+  if (! versiondata) {
+    Serial.print("Didn't find PN53x board");
+    while (1); // halt
+  }
 
+  // Got ok data, print it out!
+  Serial.print("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX);
+  Serial.print("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC);
+  Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
+
+  // Set the max number of retry attempts to read from a card
+  // This prevents us from waiting forever for a card, which is
+  // the default behaviour of the PN532.
+  nfc.setPassiveActivationRetries(0xFF);
+
+  Serial.println("Waiting for an ISO14443A card");
+
+
+
+      display.clear();
+    display.drawString(0, 0, "123");
+    display.display();
 }
 
 void loop() {
 
+/*
   TimeShit();
   GetTime();
-
+  CheckTimeForRestart();
+  SerialCommands();
+*/
     
-  delay(1000);
+  uint8_t uid[7];
+  uint8_t uidLength;
+
+  if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) {
+    Serial.print("UID: ");
+    for (uint8_t i = 0; i < uidLength; i++) {
+      Serial.print(uid[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+    delay(1000);
+  }
 
 
 }
