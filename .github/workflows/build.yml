@@ -38,7 +38,12 @@ jobs:
         arduino-cli lib install "SD"
         arduino-cli lib install "ArduinoJson"
         arduino-cli lib install "NTPClient"
-        arduino-cli lib install "PN532"
+
+       cd {Arduino}\libraries
+       git clone --recursive        https://github.com/Seeed-Studio/PN532.git NFC
+       git clone --recursive https://github.com/don/NDEF.git NDEF
+      ln -s NFC/PN532 ./
+      ln -s NDEF/NDEF ./
 
     - name: Compile sketch
       run: |
