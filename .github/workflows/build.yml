@@ -38,6 +38,7 @@ jobs:
         arduino-cli lib install "SD"
         arduino-cli lib install "ArduinoJson"
         arduino-cli lib install "NTPClient"
+        arduino-cli lib install "PN532"
 
     - name: Compile sketch
       run: |
