@@ -94,13 +94,10 @@ SSD1306Wire display(SCREEN_ADDRESS, I2C_SDA_PIN, I2C_SCL_PIN);
 int iteration = 0;
 bool dev;
 
-
 #define NFC_SDA 14
 #define NFC_SCL 27
 
 TwoWire WireNFC = TwoWire(1);
-
-// Adafruit_PN532 nfc(NFC_SDA, NFC_SCL, &WireNFC);
 
 #define NFC_INTERFACE_I2C
   #include <Wire.h>
@@ -110,8 +107,6 @@ TwoWire WireNFC = TwoWire(1);
   
   PN532_I2C pn532i2c(WireNFC);
   PN532 nfc(pn532i2c);
-
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
