@@ -662,12 +662,14 @@ void uidRead(){
     Serial.print("UID: ");
     int M = now.month();
     String pathForUID = String("/NFC/") + monthNames[M];
-    SD.open(pathForUID);
+    File UID = SD.open(pathForUID, FILE_APPEND);
     for (uint8_t i = 0; i < uidLength; i++) {
       Serial.print(uid[i], HEX);
       Serial.print(" ");
+      UID.print(uid[i], HEX);
     }
     Serial.println();
+    UID.close();
   }
 }
 
