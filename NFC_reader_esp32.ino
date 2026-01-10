@@ -675,25 +675,6 @@ void setup() {
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 
   DisplayStart();
-
-/*
-  Serial.println("\nI2C Scanner");
-  byte count = 0;
-  for (byte i = 1; i < 127; i++) {
-    Wire.beginTransmission(i);
-    if (Wire.endTransmission() == 0) {
-      Serial.print("Found device at 0x");
-      Serial.println(i, HEX);
-      count++;
-    }
-  }
-  Serial.print("Found ");
-  Serial.print(count);
-  Serial.println(" device(s).");
- */
-
-
-
   
   if (!rtc.begin()) {
     Serial.println("DS3231 nie wykryty.");
@@ -812,25 +793,25 @@ void setup() {
   // Set the max number of retry attempts to read from a card
   // This prevents us from waiting forever for a card, which is
   // the default behaviour of the PN532.
-  nfc.setPassiveActivationRetries(0xFF);
+  nfc.setPassiveActivationRetries(5);
 
   Serial.println("Waiting for an ISO14443A card");
 
 
 
-      display.clear();
+    display.clear();
     display.drawString(0, 0, "123");
     display.display();
 }
 
 void loop() {
 
-/*
+
   TimeShit();
   GetTime();
   CheckTimeForRestart();
   SerialCommands();
-*/
+
     
   uint8_t uid[7];
   uint8_t uidLength;
@@ -842,8 +823,7 @@ void loop() {
       Serial.print(" ");
     }
     Serial.println();
-    delay(1000);
   }
-
+  delay(500);
 
 }
