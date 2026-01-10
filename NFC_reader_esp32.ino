@@ -116,17 +116,14 @@ String getFileSHA(const String& repoPath) {
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
-
   String url = "https://api.github.com/repos/" + String(owner) + "/" + repo +
                "/contents/" + repoPath + "?ref=" + branch;
 
   http.begin(client, url);
   http.addHeader("User-Agent", "ESP32");
   http.addHeader("Authorization", String("token ") + githubToken);
-
   int code = http.GET();
   String sha = "";
-
   if (code == 200) {
     StaticJsonDocument<1024> doc;
     DeserializationError err = deserializeJson(doc, http.getString());
@@ -141,7 +138,6 @@ String getFileSHA(const String& repoPath) {
   } else {
     Serial.printf("❌ Nie udało się pobrać SHA (%d)\n", code);
   }
-
   http.end();
   return sha;
 }
