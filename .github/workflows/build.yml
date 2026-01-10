@@ -40,7 +40,7 @@ jobs:
         arduino-cli lib install "NTPClient"
         cd $HOME/Arduino/libraries
         git clone --recursive https://github.com/Seeed-Studio/PN532.git
-        g it clone --recursive https://github.com/don/NDEF.git
+        git clone --recursive https://github.com/don/NDEF.git
 
 
     - name: Compile sketch
