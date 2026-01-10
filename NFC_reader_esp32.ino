@@ -651,6 +651,29 @@ void CheckTimeForRestart(){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+void uidRead(){
+  uint8_t uid[7];
+  uint8_t uidLength;
+  
+  
+  if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) {
+    DateTime now = rtc.now();
+    Serial.print("UID: ");
+    int M = now.month();
+    String pathForUID = String("/NFC/") + monthNames[M];
+    SD.open(pathForUID);
+    for (uint8_t i = 0; i < uidLength; i++) {
+      Serial.print(uid[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+  }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -670,16 +693,9 @@ void setup() {
   if (!rtc.begin()) {
     Serial.println("DS3231 nie wykryty.");
   }
-  //rtc.adjust(DateTime(2000, 1, 1, 0, 0, myTime)); 
 
   loadDevMode();
-
-  
-  
  // ==========
-
-
-  
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SD_CS);
   if (!SD.begin(SD_CS)) {
     Serial.println("❌ Błąd SD!");
@@ -776,11 +792,6 @@ void setup() {
     while (1); // halt
   }
 
-  // Got ok data, print it out!
-  Serial.print("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX);
-  Serial.print("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC);
-  Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
-
   // Set the max number of retry attempts to read from a card
   // This prevents us from waiting forever for a card, which is
   // the default behaviour of the PN532.
@@ -789,32 +800,18 @@ void setup() {
   Serial.println("Waiting for an ISO14443A card");
 
 
-
-    display.clear();
-    display.drawString(0, 0, "123");
-    display.display();
+  display.clear();
+  display.drawString(0, 0, "123");
+  display.display();
 }
 
 void loop() {
-
-
   TimeShit();
   GetTime();
   CheckTimeForRestart();
   SerialCommands();
+  uidRead();
 
-    
-  uint8_t uid[7];
-  uint8_t uidLength;
-
-  if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) {
-    Serial.print("UID: ");
-    for (uint8_t i = 0; i < uidLength; i++) {
-      Serial.print(uid[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
-  }
   delay(500);
 
 }
