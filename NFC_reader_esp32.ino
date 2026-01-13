@@ -3,7 +3,9 @@
  *  display d
  *  ntp d
  *  zegar d
- *  zczytywanie kart
+ *  zczytywanie kart d
+ *  zapis uid do pliku o nazwie miesiąca z rokiem, ale max co 2 godziny na uid
+ *  
  *  logs ~ nie wysyła plików do githuba
  *  konsola w pliku txt (pobieranie pliku txt z githuba co 1 min i sprawdzanie komend w nim)
  *  zeby bez wifi tez dzialalo (wpisywanie wifi cred bez modyfikowania ino) d
@@ -28,7 +30,6 @@
 #include <Wire.h>
 #include <time.h>
 #include <Preferences.h>
-//#include <Adafruit_PN532.h>
 
 ////
 
@@ -652,27 +653,28 @@ void CheckTimeForRestart(){
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-void uidRead(){
+String uidRead(){
+  String uidOfCard;
   uint8_t uid[7];
   uint8_t uidLength;
-  
-  
   if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) {
+    Logs("Wyktyto Karte!");
     DateTime now = rtc.now();
-    Serial.print("UID: ");
-    int M = now.month();
-    String pathForUID = String("/NFC/") + monthNames[M];
-    File UID = SD.open(pathForUID, FILE_APPEND);
+    uidOfCard += "[" + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " "; 
+    uidOfCard += String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second()) + "] ";   
     for (uint8_t i = 0; i < uidLength; i++) {
-      Serial.print(uid[i], HEX);
-      Serial.print(" ");
-      UID.print(uid[i], HEX);
+      uidOfCard += String(uid[i], HEX);
+      uidOfCard += " ";
     }
-    Serial.println();
-    UID.close();
+    int idx = uidOfCard.indexOf(']');
+    String uid = uidOfCard.substring(idx + 1);
+    display.clear();
+    display.drawString(0, 0, "Wykryto karte");
+    display.drawString(0, 15, uid);
+    display.display();
   }
+  return uidOfCard;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -680,14 +682,12 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
-
-
  // ==========
   unsigned long myTime;
   myTime = millis();
   myTime = myTime / 1000;
 
-  delay(3000);
+  delay(1000);
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 
   DisplayStart();
@@ -708,10 +708,8 @@ void setup() {
   }
   Logs("Karta SD gotowa!");
   Logs("Start ESP32...");
-  
 
   String ssid, pass;
-
   if (loadWiFi(ssid, pass)) {
     Logs("Łączenie z ");
     Logs(ssid);
@@ -733,8 +731,6 @@ void setup() {
   display.clear();
   display.drawString(0, 0, "Polaczono z WIFI");
   display.display();
-
-  
 
  // ==========
 
@@ -787,24 +783,13 @@ void setup() {
   delay(1000);
   nfc.begin();
   nfc.SAMConfig();
-  
   uint32_t versiondata = nfc.getFirmwareVersion();
   if (! versiondata) {
     Serial.print("Didn't find PN53x board");
     while (1); // halt
   }
-
-  // Set the max number of retry attempts to read from a card
-  // This prevents us from waiting forever for a card, which is
-  // the default behaviour of the PN532.
-  nfc.setPassiveActivationRetries(5);
-
+  nfc.setPassiveActivationRetries(20);
   Serial.println("Waiting for an ISO14443A card");
-
-
-  display.clear();
-  display.drawString(0, 0, "123");
-  display.display();
 }
 
 void loop() {
@@ -812,7 +797,7 @@ void loop() {
   GetTime();
   CheckTimeForRestart();
   SerialCommands();
-  uidRead();
+  Serial.println(uidRead());
 
   delay(500);
 
