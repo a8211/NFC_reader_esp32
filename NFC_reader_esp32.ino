@@ -7,6 +7,7 @@
  *  zapis uid do pliku o nazwie miesiąca z rokiem, ale max co 2 godziny na uid
  *  
  *  logs ~ nie wysyła plików do githuba
+* można dodać że drugie esp podłączone na chwile zapisuje logs o może wgrać zmiany
  *  konsola w pliku txt (pobieranie pliku txt z githuba co 1 min i sprawdzanie komend w nim)
  *  zeby bez wifi tez dzialalo (wpisywanie wifi cred bez modyfikowania ino) d
  *  restart o polnocy d
