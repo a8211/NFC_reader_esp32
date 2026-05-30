@@ -589,12 +589,20 @@ while(true){
      ESP.restart();
     }
   }   
+
+  if (line.startsWith("Restart")) {
+    Logs("Restarting");
+    delay(500);
+     ESP.restart();
+    }
+  } 
       
     if (line.startsWith("help")) {
       Logs("help");
       Logs("dev");
       Logs("wifi");
       Logs("GToken");
+      Logs("Restart");
      }
     
   }
