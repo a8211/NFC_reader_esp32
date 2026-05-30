@@ -99,6 +99,9 @@ SSD1306Wire display(SCREEN_ADDRESS, I2C_SDA_PIN, I2C_SCL_PIN);
 int iteration = 0;
 bool dev;
 
+unsigned long SCTime;
+unsigned long SCTimeNext;
+
 #define NFC_SDA 14
 #define NFC_SCL 27
 
@@ -634,6 +637,10 @@ while(true){
     delay(500);
      ESP.restart();
     } 
+
+  if (line.startsWith("TimeUp")) {
+    iteration = 0;
+  } 
       
     if (line.startsWith("help")) {
       Logs("help");
@@ -641,6 +648,7 @@ while(true){
       Logs("wifi");
       Logs("GToken");
       Logs("Restart");
+      Logs("TimeUp");
      }
     
   }
@@ -711,8 +719,10 @@ String uidRead(){
   String uidOfCard;
   uint8_t uid[7];
   uint8_t uidLength;
+  SCTime = millis();
   if (nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength)) {
     Logs("Wyktyto Karte!");
+    SCTimeNext = SCTime + 2000;
     DateTime now = rtc.now();
     uidOfCard += "[" + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " "; 
     uidOfCard += String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second()) + "] ";   
@@ -725,6 +735,11 @@ String uidRead(){
     display.clear();
     display.drawString(0, 0, "Wykryto karte");
     display.drawString(0, 15, uid);
+    display.display();
+  }
+  if(SCTime >= SCTimeNext){
+    display.clear();
+    display.drawString(0, 0, "Zbliz Karte");
     display.display();
   }
   return uidOfCard;
@@ -834,6 +849,9 @@ if (loadToken(GToken)) {
     }
   } else {
     Logs("Brak nowej wersji firmware. Uruchamianie normalne...");
+    display.clear();
+    display.drawString(0, 0, "Zbliz karte");
+    display.display();
   }
 
  // ==========
