@@ -545,6 +545,28 @@ void DisplayStart(){
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void loadDevMode(){
+  prefs.begin("devMode", true);
+  dev = prefs.getBool("devM", "");
+  prefs.end();
+}
+
+
+void saveDevMode(){
+  if(dev == true){
+    Logs("DevMode off");
+    prefs.begin("devMode", false);
+    prefs.putBool("devM", false);
+    prefs.end();
+  } else { 
+    Logs("DevMode on");
+    prefs.begin("devMode", false);
+    prefs.putBool("devM", true);
+    prefs.end();
+  }
+}
+
+
 void saveWiFi(const char* ssid, const char* pass) {
   prefs.begin("wifi", false);
   prefs.putString("ssid", ssid);
@@ -611,8 +633,7 @@ while(true){
     Logs("Restarting");
     delay(500);
      ESP.restart();
-    }
-  } 
+    } 
       
     if (line.startsWith("help")) {
       Logs("help");
@@ -627,26 +648,7 @@ while(true){
 
 }
 
-void loadDevMode(){
-  prefs.begin("devMode", true);
-  dev = prefs.getBool("devM", "");
-  prefs.end();
-}
 
-
-void saveDevMode(){
-  if(dev == true){
-    Logs("DevMode off");
-    prefs.begin("devMode", false);
-    prefs.putBool("devM", false);
-    prefs.end();
-  } else { 
-    Logs("DevMode on");
-    prefs.begin("devMode", false);
-    prefs.putBool("devM", true);
-    prefs.end();
-  }
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
