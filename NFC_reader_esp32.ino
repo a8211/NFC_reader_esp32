@@ -12,7 +12,6 @@
  *  zeby bez wifi tez dzialalo (wpisywanie wifi cred bez modyfikowania ino) d
  *  restart o polnocy d
  *  wersja na display
- *  
 */
 
 
