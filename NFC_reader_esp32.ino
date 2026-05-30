@@ -582,7 +582,6 @@ while(true){
   if (line.startsWith("GToken ")) {
     String GToken = line.substring(7);
     GToken.trim();
-    Serial.println("321");
     if (GToken.length() > 0) {
      saveToken(GToken.c_str());
      Serial.println(GToken);
@@ -591,7 +590,10 @@ while(true){
   }   
       
     if (line.startsWith("help")) {
-      Serial.println("123");
+      Logs("help");
+      Logs("dev");
+      Logs("wifi");
+      Logs("GToken");
      }
     
   }
@@ -608,10 +610,12 @@ void loadDevMode(){
 
 void saveDevMode(){
   if(dev == true){
+    Logs("DevMode off");
     prefs.begin("devMode", false);
     prefs.putBool("devM", false);
     prefs.end();
   } else { 
+    Logs("DevMode on");
     prefs.begin("devMode", false);
     prefs.putBool("devM", true);
     prefs.end();
