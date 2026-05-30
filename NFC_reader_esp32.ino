@@ -116,6 +116,23 @@ TwoWire WireNFC = TwoWire(1);
 
 
 
+void Logs(String x) { 
+  DateTime now = rtc.now(); 
+  String tme; 
+  tme += "[" + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " "; 
+  tme += String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second()) + "] " + x; 
+  int miesiac = now.month(); 
+  Serial.println(tme); 
+  String path = String("/logs/") + now.day() + monthNames[miesiac] + now.year() + ".txt"; 
+  File Log = SD.open(path, FILE_APPEND); 
+  if (Log) { 
+    Log.println(tme); 
+    Log.close(); 
+  } 
+}
+
+
+
 String getFileSHA(const String& repoPath) {
   WiFiClientSecure client;
   client.setInsecure();
@@ -671,20 +688,6 @@ void GetTime() {
 
 
 
-void Logs(String x) { 
-  DateTime now = rtc.now(); 
-  String tme; 
-  tme += "[" + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " "; 
-  tme += String(now.hour()) + ":" + String(now.minute()) + ":" + String(now.second()) + "] " + x; 
-  int miesiac = now.month(); 
-  Serial.println(tme); 
-  String path = String("/logs/") + now.day() + monthNames[miesiac] + now.year() + ".txt"; 
-  File Log = SD.open(path, FILE_APPEND); 
-  if (Log) { 
-    Log.println(tme); 
-    Log.close(); 
-  } 
-}
 
 
 void CheckTimeForRestart(){
