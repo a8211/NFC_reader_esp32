@@ -7,7 +7,7 @@
  *  zapis uid do pliku o nazwie miesiąca z rokiem, ale max co 2 godziny na uid
  *  
  *  logs ~ nie wysyła plików do githuba
-* można dodać że drugie esp podłączone na chwile zapisuje logs o może wgrać zmiany
+* można dodać że drugie esp podłączone na chwile zapisuje logs i może wgrać zmiany
  *  konsola w pliku txt (pobieranie pliku txt z githuba co 1 min i sprawdzanie komend w nim)
  *  zeby bez wifi tez dzialalo (wpisywanie wifi cred bez modyfikowania ino) d
  *  restart o polnocy d
@@ -67,7 +67,8 @@ RTC_DS3231 rtc;
 Preferences prefs;
 
 // Twój token GitHub (PRYWATNY!)
-const char* githubToken = "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";
+//const char* githubToken = "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";
+String githubToken;
 
 
 WiFiClientSecure client;
@@ -262,7 +263,7 @@ bool downloadFile(const char* url, const char* path) {
   int downloaded = 0;
   unsigned long lastUpdate = millis();
   unsigned long startTime = millis();
-  http.setTimeout(240000);
+  http.setTimeout(60000);
   while (http.connected() && (downloaded < totalSize || totalSize == -1)) {
     size_t available = stream->available();
     if (available) {
@@ -301,7 +302,7 @@ String getDownloadUrl(const char* repoPath) {
   HTTPClient http;
   http.begin(client, apiUrl);
   http.addHeader("User-Agent", "ESP32");
-  if (strlen(githubToken) > 0) {
+  if (githubToken.length() > 0) {
     http.addHeader("Authorization", String("token ") + githubToken);
   }
 
@@ -542,7 +543,23 @@ bool loadWiFi(String& ssid, String& pass) {
   return ssid.length() > 0;
 }
 
-void SerialCommands(){
+void saveToken(const char* GToken) {
+  prefs.begin("GToken", false);
+  prefs.putString("GToken", GToken);
+  prefs.end();
+}
+
+bool loadToken(String& GToken) {
+  prefs.begin("GToken", true);      // true = tylko odczyt
+  GToken = prefs.getString("GToken", "");
+  prefs.end();
+
+  return GToken;
+}
+
+void SerialCommands(void* parameter){
+
+while(true){
   if (Serial.available()) {
     String line = Serial.readStringUntil('\n');
     line.trim();
@@ -561,8 +578,25 @@ void SerialCommands(){
       Serial.println("dev mode");
       saveDevMode();
       }
+
+  if (line.startsWith("GToken ")) {
+    String GToken = line.substring(7);
+    GToken.trim();
+    Serial.println("321");
+    if (GToken.length() > 0) {
+     saveToken(GToken.c_str());
+     Serial.println(GToken);
+     ESP.restart();
+    }
+  }   
+      
+    if (line.startsWith("help")) {
+      Serial.println("123");
+     }
     
   }
+}
+
 }
 
 void loadDevMode(){
@@ -725,6 +759,15 @@ void setup() {
     Logs("Brak zapisanych danych WiFi");
   }
 
+String GToken;
+if (loadToken(GToken)) {
+    Logs("Pobieranie Tokenu");
+    githubToken = GToken;  // ← przypisuje do globalnej zmiennej
+} else {
+    Logs("Brak zapisanych danych Tokenu");
+}
+
+  
   Logs(WiFi.localIP().toString());
 
   if(WiFi.status() == WL_CONNECTED) {
@@ -792,13 +835,14 @@ void setup() {
   }
   nfc.setPassiveActivationRetries(20);
   Serial.println("Waiting for an ISO14443A card");
+
+  xTaskCreatePinnedToCore(SerialCommands, "SerialCommands", 4096, NULL, 7, NULL, 0);
 }
 
 void loop() {
   TimeShit();
   GetTime();
   CheckTimeForRestart();
-  SerialCommands();
   Serial.println(uidRead());
 
   delay(500);
